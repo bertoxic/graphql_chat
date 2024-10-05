@@ -1,0 +1,66 @@
+yourproject/
+├── cmd/
+│   └── server/
+│       └── main.go           # Entry point of your application
+├── internal/
+│   ├── app/
+│   │   └── app.go            # Application setup and initialization
+│   ├── auth/
+│   │   ├── service.go        # AuthService interface and implementation
+│   │   ├── models.go         # Auth-related models
+│   │   └── repository.go     # Auth repository interface and implementation
+│   ├── user/
+│   │   ├── service.go        # UserService interface and implementation
+│   │   ├── models.go         # User-related models
+│   │   └── repository.go     # User repository interface and implementation
+│   ├── tweet/
+│   │   ├── service.go        # TweetService interface and implementation
+│   │   ├── models.go         # Tweet-related models
+│   │   └── repository.go     # Tweet repository interface and implementation
+│   ├── graphql/
+│   │   ├── schema/
+│   │   │   ├── schema.graphql    # GraphQL schema definition
+│   │   │   ├── user.graphql      # User-specific GraphQL schema
+│   │   │   └── tweet.graphql     # Tweet-specific GraphQL schema
+│   │   ├── resolvers/
+│   │   │   ├── user_resolver.go  # User-related resolvers
+│   │   │   └── tweet_resolver.go # Tweet-related resolvers
+│   │   └── server.go         # GraphQL server setup
+│   ├── config/
+│   │   └── config.go         # Application configuration
+│   └── database/
+│       └── database.go       # Database connection and management
+├── pkg/
+│   └── utils/
+│       └── utils.go          # Shared utility functions
+├── go.mod
+├── go.sum
+└── Makefile
+
+Explanation of new and modified components:
+
+1. internal/user/:
+   - service.go: Defines UserService interface and implementation for user-specific operations (e.g., update profile, follow/unfollow)
+   - models.go: Defines user-related models (e.g., UserProfile)
+   - repository.go: Defines UserRepository interface and implementation for user data access
+
+2. internal/tweet/:
+   - service.go: Defines TweetService interface and implementation for tweet operations (e.g., create tweet, like, retweet)
+   - models.go: Defines tweet-related models (e.g., Tweet, Comment)
+   - repository.go: Defines TweetRepository interface and implementation for tweet data access
+
+3. internal/graphql/:
+   - schema/: Contains GraphQL schema definitions
+     - schema.graphql: Main schema file that imports other schema files
+     - user.graphql: User-specific types, queries, and mutations
+     - tweet.graphql: Tweet-specific types, queries, and mutations
+   - resolvers/: Contains resolver implementations
+     - user_resolver.go: Implements resolvers for user-related queries and mutations
+     - tweet_resolver.go: Implements resolvers for tweet-related queries and mutations
+   - server.go: Sets up and configures the GraphQL server
+
+4. internal/app/app.go:
+   - Update this to initialize all services (Auth, User, Tweet) and the GraphQL server
+
+5. cmd/server/main.go:
+   - Update to start the GraphQL server instead of (or alongside) a REST API server
