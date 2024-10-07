@@ -4,6 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path/filepath"
+	"runtime"
+	"strings"
 )
 
 var (
@@ -48,9 +51,16 @@ const (
 )
 
 // AppError represents an application error
+type ErrDetails struct {
+	Message string
+	File    string
+	Line    int
+	Func    string
+}
 type AppError struct {
 	Code    ErrorCode
 	Message string
+	Details string
 	Err     error
 }
 
@@ -59,6 +69,12 @@ func (e AppError) Error() string {
 		return fmt.Sprintf("error code %d: %s - %v", e.Code, e.Message, e.Err)
 	}
 	return fmt.Sprintf("error code %d: %s", e.Code, e.Message)
+}
+func (e AppError) Detail() string {
+	if e.Err != nil {
+		return fmt.Sprintf("error code %d: %s - %v", e.Code, e.Details, e.Err)
+	}
+	return fmt.Sprintf("error code %d: %s", e.Code, e.Details)
 }
 
 // Unwrap returns the wrapped error
@@ -79,9 +95,40 @@ func (e AppError) Unwrap() error {
 
 // NewAppError creates a new AppError
 func NewAppError(code ErrorCode, message string, err error) AppError {
+	// Get runtime info for the caller
+	pc, file, line, ok := runtime.Caller(1) // Get the caller of this function (1 stack frame up)
+	if !ok {
+		return AppError{
+			Code:    code,
+			Message: message,
+			Details: "",
+			Err:     err,
+		}
+	}
+	fn := runtime.FuncForPC(pc)
+	funcName := "unknown"
+	if fn != nil {
+		fullFuncName := fn.Name()
+		funcName = filepath.Base(fullFuncName)
+		// If the function name still contains a package path, split by '/' and take the last part
+		parts := strings.Split(funcName, "/")
+		funcName = parts[len(parts)-1]
+		// Retrieve the function name
+	}
+	e := ErrDetails{
+		Message: message,
+		File:    file,
+		Line:    line,
+		Func:    funcName,
+	}
+	detailmsg := fmt.Sprintf(
+		"errmsg: %s,\nIn file: %s\nat line:%d, in function: %s\n",
+		e.Message, e.File, e.Line, e.Func)
+
 	return AppError{
 		Code:    code,
 		Message: message,
+		Details: detailmsg,
 		Err:     err,
 	}
 }
