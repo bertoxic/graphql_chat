@@ -3,19 +3,24 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/bertoxic/graphqlChat/internal/database"
+	"github.com/bertoxic/graphqlChat/internal/database/postgres"
+	"github.com/bertoxic/graphqlChat/internal/drivers"
+	errorx "github.com/bertoxic/graphqlChat/internal/error"
+	"github.com/bertoxic/graphqlChat/internal/handlers"
+	"github.com/bertoxic/graphqlChat/pkg/config"
 	"github.com/joho/godotenv"
 	"golang.org/x/sys/windows"
+	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/bertoxic/graphqlChat/internal/auth"
-	"github.com/bertoxic/graphqlChat/internal/config"
-	"github.com/bertoxic/graphqlChat/internal/drivers"
 )
 
 type App struct {
 	config      config.AppConfig
-	DB          drivers.Database
+	DB          database.DatabaseRepo
 	authService auth.AuthService
 }
 
@@ -40,13 +45,16 @@ func NewApp(ctx context.Context, cfg config.AppConfig) (*App, error) {
 	if err := app.initializeDB(ctx); err != nil {
 		return nil, err
 	}
+	if err := app.initializeHandlers(ctx, app); err != nil {
+		return nil, err
+	}
 
 	return app, nil
 }
 
 func (a *App) initialize() error {
 	if a.config.DataBase == nil || a.config.DataBase.URL == "" {
-		return fmt.Errorf("database configuration is missing or incomplete")
+		return errorx.New(errorx.ErrCodeValidation, "Data configuration is invalid or missing", fmt.Errorf("could not load database config"))
 	}
 	return nil
 }
@@ -55,15 +63,30 @@ func (a *App) initializeServices() error {
 	//initialize all my services here
 	userRepo := auth.NewUserRepo()
 	a.authService = auth.NewAuthService(userRepo)
+
 	return nil
 }
 
 func (a *App) initializeDB(ctx context.Context) error {
-	database, err := drivers.NewDatabase(ctx, a.config.DataBase.URL, "pgx")
+	database, err := database.NewDatabase(ctx, a.config.DataBase.URL, "pgx")
 	if err != nil {
 		return fmt.Errorf("failed to initialize database: %w", err)
 	}
-	a.DB = database
+	err = database.Migrate()
+	if err != nil {
+		log.Fatalf("unable to run database migration: %v", err)
+	}
+	db, ok := database.(*drivers.PostgresDB)
+	if ok {
+		a.DB = postgres.NewPostgresDBRepo(a, db)
+	}
+
+	return nil
+}
+
+func (a *App) initializeHandlers(ctx context.Context, app *App) error {
+	dbrepo := handlers.NewRepository(app, a.DB)
+	handlers.NewRepo(dbrepo)
 	return nil
 }
 func LoadEnv() error {

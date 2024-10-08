@@ -19,7 +19,7 @@ func (e *CustomError) Error() string {
 }
 
 // New creates a new CustomError with file and line information
-func New(message string) error {
+func NewCustomErr(message string) error {
 	// Get runtime info for the caller
 	pc, file, line, ok := runtime.Caller(1) // Get the caller of this function (1 stack frame up)
 	if !ok {
@@ -40,3 +40,28 @@ func New(message string) error {
 		Func:    funcName,
 	}
 }
+
+//// Basic usage
+//err := errors.New(errors.ErrCodeNotFound, "user not found", nil)
+//
+//// With options
+//err := errors.New(errors.ErrCodeDatabase,
+//"failed to update user",
+//originalError,
+//errors.WithRequestID("req-123"),
+//errors.WithContext(map[string]interface{}{
+//"userId": 123,
+//"action": "update",
+//}),
+//errors.WithOperation("UpdateUser"))
+//
+//// Using convenience constructors
+//err := errors.NewValidationError("email", "invalid format")
+//
+//// Checking errors
+//if errors.Is(err, errors.ErrCodeNotFound) {
+//// Handle not found error
+//}
+//
+//// Getting HTTP status
+//status := err.HTTPStatusCode()

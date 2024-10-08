@@ -2,26 +2,38 @@ package auth
 
 import (
 	"context"
+	errorx "github.com/bertoxic/graphqlChat/internal/error"
+	"github.com/bertoxic/graphqlChat/internal/models"
+
+	"github.com/bertoxic/graphqlChat/internal/database"
 )
 
 // UserRepository defines the interface for user-related database operations
 type UserRepository interface {
-	CreateUser(ctx context.Context, user RegistrationInput) (UserDetails, error)
-	GetUserByEmail(ctx context.Context, email string) (UserDetails, error)
+	CreateUser(ctx context.Context, user RegistrationInput) (*models.UserDetails, error)
+	GetUserByEmail(ctx context.Context, email string) (*models.UserDetails, error)
 }
 
-type UserRepo struct{}
+type UserRepo struct {
+	DB database.DatabaseRepo
+}
 
 func NewUserRepo() *UserRepo {
 	return &UserRepo{}
 }
 
-func (UserRepo) CreateUser(ctx context.Context, user RegistrationInput) (UserDetails, error) {
+func (us *UserRepo) CreateUser(ctx context.Context, user RegistrationInput) (*models.UserDetails, error) {
+	// us.DB.CreateUser()
 	//TODO implement me
-	return UserDetails{}, nil
+	userdetails, err := us.DB.CreateUser(ctx, &user)
+	if err != nil {
+		return nil, errorx.New(errorx.ErrCodeDatabase, "", err)
+	}
+
+	return userdetails, nil
 }
 
-func (UserRepo) GetUserByEmail(ctx context.Context, email string) (UserDetails, error) {
+func (UserRepo) GetUserByEmail(ctx context.Context, email string) (*models.UserDetails, error) {
 	//TODO implement me
-	return UserDetails{}, nil
+	return &models.UserDetails{}, nil
 }

@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/bertoxic/graphqlChat/internal/config"
-	"github.com/bertoxic/graphqlChat/internal/utils"
+	errorx "github.com/bertoxic/graphqlChat/internal/error"
+	"github.com/bertoxic/graphqlChat/internal/models"
+	"github.com/bertoxic/graphqlChat/pkg/config"
 	"net/mail"
 	"regexp"
 	"strings"
@@ -35,7 +36,7 @@ func NewAuthService(userRepo UserRepository) AuthService {
 
 func (s *authService) Register(ctx context.Context, input RegistrationInput) (*AuthResponse, error) {
 	if err := input.Validate(); err != nil {
-		return nil, fmt.Errorf("%w: %v", utils.ErrValidation, err)
+		return nil, fmt.Errorf("%w: %v", errorx.New(errorx.ErrCodeValidation, "registration failed", err), err)
 	}
 
 	input.Sanitize()
@@ -43,7 +44,7 @@ func (s *authService) Register(ctx context.Context, input RegistrationInput) (*A
 	// Here you would typically:
 	// 1. Check if the user already exists
 	if _, err := s.userRepo.GetUserByEmail(ctx, input.Email); err != nil {
-		return nil, fmt.Errorf("%w %v", err, utils.ErrUserExist)
+		return nil, fmt.Errorf("%w %v", err, errorx.ErrNotFound)
 	}
 	// 2. Hash the password
 	// 3. Store the user in the database
@@ -52,7 +53,7 @@ func (s *authService) Register(ctx context.Context, input RegistrationInput) (*A
 	// For demonstration purposes:
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), passwordCost)
 	if err != nil {
-		return nil, fmt.Errorf("%w: failed to hash password", utils.ErrInternalServer)
+		return nil, fmt.Errorf("%w: failed to hash password", errorx.ErrInternal)
 	}
 
 	// TODO: Implement user storage and token generation
@@ -62,7 +63,7 @@ func (s *authService) Register(ctx context.Context, input RegistrationInput) (*A
 		Username: input.Username,
 		Password: string(hashedPassword),
 	}
-	userDetails := UserDetails{}
+	userDetails := &models.UserDetails{}
 	userDetails, err = s.userRepo.CreateUser(ctx, *user)
 	if err != nil {
 		return nil, err
@@ -71,12 +72,12 @@ func (s *authService) Register(ctx context.Context, input RegistrationInput) (*A
 	accessToken, err := generateAccessToken(user)
 	return &AuthResponse{
 		AccessToken: accessToken, // Replace with actual token generation
-		User:        userDetails,
+		User:        *userDetails,
 	}, nil
 }
 func (s *authService) Login(ctx context.Context, input LoginInput) (*AuthResponse, error) {
 	if err := input.Validate(); err != nil {
-		return nil, fmt.Errorf("%w: %v", utils.ErrValidation, err)
+		return nil, fmt.Errorf("%w: %v", errorx.ErrValidation, err)
 	}
 
 	input.Sanitize()
@@ -84,8 +85,8 @@ func (s *authService) Login(ctx context.Context, input LoginInput) (*AuthRespons
 	// Check if the user exists
 	user, err := s.userRepo.GetUserByEmail(ctx, input.Email)
 	if err != nil {
-		if errors.Is(err, utils.ErrUserNotFound) {
-			return nil, fmt.Errorf("%w, %w: user not found", utils.ErrAuthentication, utils.ErrUserNotFound)
+		if errors.Is(err, errorx.ErrNotFound) {
+			return nil, fmt.Errorf("%w, %w: user not found", errorx.ErrNotFound)
 		}
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
@@ -95,17 +96,17 @@ func (s *authService) Login(ctx context.Context, input LoginInput) (*AuthRespons
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password))
 	if err != nil {
-		return nil, fmt.Errorf("%w , %w, %w", err, utils.ErrAuthentication, utils.ErrInvalidCredentials)
+		return nil, fmt.Errorf("%w , %w, %w", err, errorx.ErrInvalidCredentials)
 	}
 	// Generate access token
 	accessToken, err := generateAccessToken(&input)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate access token: %w, %w", err, utils.ErrInternalServer)
+		return nil, fmt.Errorf("failed to generate access token: %w, %w", err, errorx.ErrInternal)
 	}
 
 	return &AuthResponse{
 		AccessToken: accessToken,
-		User:        UserDetails{Email: input.Email},
+		User:        models.UserDetails{Email: input.Email},
 	}, nil
 }
 func verifyPassword(password string) (bool, error) {
@@ -113,7 +114,7 @@ func verifyPassword(password string) (bool, error) {
 
 	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
 	if err != nil {
-		return false, utils.ErrValidation
+		return false, errorx.ErrValidation
 	}
 	return true, nil
 }
@@ -145,7 +146,7 @@ func (in *RegistrationInput) Validate() error {
 	}
 
 	if len(errors) > 0 {
-		return fmt.Errorf("%w: %s", utils.ErrValidation, strings.Join(errors, "; "))
+		return fmt.Errorf("%w: %s", errorx.ErrValidation, strings.Join(errors, "; "))
 	}
 
 	return nil
@@ -166,7 +167,7 @@ func (in *LoginInput) Validate() error {
 	}
 
 	if len(errors) > 0 {
-		return fmt.Errorf("%w: %s", utils.ErrValidation, strings.Join(errors, "; "))
+		return fmt.Errorf("%w: %s", errorx.ErrValidation, strings.Join(errors, "; "))
 	}
 
 	return nil

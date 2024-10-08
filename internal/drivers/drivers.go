@@ -2,10 +2,8 @@ package drivers
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/bertoxic/graphqlChat/internal/utils"
 	"log"
 	"path/filepath"
 	"runtime"
@@ -51,25 +49,29 @@ func (db *PostgresDB) Close() {
 	db.Pool.Close()
 }
 
-func NewDatabase(ctx context.Context, dsn string, driver string) (Database, error) {
-	switch driver {
-	case "pgx":
-		apperr := utils.NewAppError(1000, "database nulls", errors.New("db failed not"))
-		fmt.Printf("%v", apperr.Details)
-
-		return NewPostgresDB(ctx, dsn)
-	case "mysql":
-		_, err := sql.Open("mysql", dsn)
-		if err != nil {
-			return nil, fmt.Errorf("failed to connect to mysql: %w", err)
-		}
-		// return &SqlDB{DB: db}, nil
-		return nil, nil
-
-	default:
-		return nil, fmt.Errorf("unsupported driver: %s", driver)
-	}
+func (db *PostgresDB) GetPoolConn() *pgxpool.Pool {
+	return db.Pool
 }
+
+//func NewDatabase(ctx context.Context, dsn string, driver string) (Database, error) {
+//	switch driver {
+//	case "pgx":
+//		apperr := utils.NewAppError(1000, "database nulls", errors.New("db failed not"))
+//		fmt.Printf("%v", apperr.Details)
+//
+//		return NewPostgresDB(ctx, dsn)
+//	case "mysql":
+//		_, err := sql.Open("mysql", dsn)
+//		if err != nil {
+//			return nil, fmt.Errorf("failed to connect to mysql: %w", err)
+//		}
+//		// return &SqlDB{DB: db}, nil
+//		return nil, nil
+//
+//	default:
+//		return nil, fmt.Errorf("unsupported driver: %s", driver)
+//	}
+//}
 
 func (db *PostgresDB) Migrate() error {
 	_, currentFile, _, ok := runtime.Caller(0)
@@ -85,7 +87,7 @@ func (db *PostgresDB) Migrate() error {
 	// Use filepath.ToSlash to ensure forward slashes
 	migrationURL := "file://" + filepath.ToSlash(migrationPath)
 
-	// Initialize the migration instance
+	// Initialize the migrationstance
 	m, err := migrate.New(migrationURL, db.dsn)
 	if err != nil {
 		return fmt.Errorf("failed to initialize migrations: %w", err)

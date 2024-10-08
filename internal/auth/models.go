@@ -1,5 +1,7 @@
 package auth
 
+import "github.com/bertoxic/graphqlChat/internal/models"
+
 // models.go
 
 type InputDetails interface {
@@ -18,14 +20,14 @@ type LoginInput struct {
 	Password string `bson:"password" json:"password"`
 }
 
-type UserDetails struct {
-	ID       string `bson:"id" json:"id"`
-	UserName string `bson:"user_name" json:"user_name"`
-	Email    string `bson:"email" json:"email"`
-	Password string `bson:"password" json:"password"`
-}
+//type UserDetails struct {
+//	ID       string `bson:"id" json:"id"`
+//	UserName string `bson:"user_name" json:"user_name"`
+//	Email    string `bson:"email" json:"email"`
+//	Password string `bson:"password" json:"password"`
+//}
 
 type AuthResponse struct {
-	AccessToken string      `bson:"access_token" json:"access_token"`
-	User        UserDetails `bson:"user" json:"user"`
+	AccessToken string             `bson:"access_token" json:"access_token"`
+	User        models.UserDetails `bson:"user" json:"user"`
 }
