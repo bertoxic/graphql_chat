@@ -2,8 +2,10 @@ package auth
 
 import (
 	"context"
+	"fmt"
 	errorx "github.com/bertoxic/graphqlChat/internal/error"
 	"github.com/bertoxic/graphqlChat/internal/models"
+	"github.com/jackc/pgx/v4/pgxpool"
 
 	"github.com/bertoxic/graphqlChat/internal/database"
 )
@@ -23,17 +25,29 @@ func NewUserRepo() *UserRepo {
 }
 
 func (us *UserRepo) CreateUser(ctx context.Context, user RegistrationInput) (*models.UserDetails, error) {
+
 	// us.DB.CreateUser()
 	//TODO implement me
-	userdetails, err := us.DB.CreateUser(ctx, &user)
+	userDetails, err := us.DB.CreateUser(ctx, &user)
+	if err != nil {
+		return nil, err
+	}
 	if err != nil {
 		return nil, errorx.New(errorx.ErrCodeDatabase, "", err)
 	}
 
-	return userdetails, nil
+	return userDetails, nil
 }
+func createUser(ctx context.Context, pgx *pgxpool.Pool) error {
+	return nil
+}
+func (us *UserRepo) GetUserByEmail(ctx context.Context, email string) (*models.UserDetails, error) {
+	userDetails, err := us.DB.GetUserByEmail(ctx, email)
 
-func (UserRepo) GetUserByEmail(ctx context.Context, email string) (*models.UserDetails, error) {
-	//TODO implement me
-	return &models.UserDetails{}, nil
+	if err != nil {
+		return nil, errorx.New(errorx.ErrCodeDatabase, "", err)
+		fmt.Printf("%s", err)
+	}
+
+	return userDetails, nil
 }

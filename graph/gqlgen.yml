@@ -1,0 +1,13 @@
+skip_validation: true
+
+
+schema: .**/*.graphql
+
+resolver:
+  layout: follow-schema
+  dir: ./resolvers
+
+# Where should any generated models go?
+model:
+  filename: ./model/models_gen.go
+  package: model

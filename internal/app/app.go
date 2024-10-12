@@ -3,23 +3,25 @@ package app
 import (
 	"context"
 	"fmt"
-	"github.com/bertoxic/graphqlChat/internal/database"
 	"github.com/bertoxic/graphqlChat/internal/database/postgres"
 	"github.com/bertoxic/graphqlChat/internal/drivers"
 	errorx "github.com/bertoxic/graphqlChat/internal/error"
 	"github.com/bertoxic/graphqlChat/internal/handlers"
-	"github.com/bertoxic/graphqlChat/pkg/config"
-	"github.com/joho/godotenv"
-	"golang.org/x/sys/windows"
+	"github.com/bertoxic/graphqlChat/internal/render"
 	"log"
 	"os"
 	"path/filepath"
 
+	"github.com/joho/godotenv"
+	"golang.org/x/sys/windows"
+
 	"github.com/bertoxic/graphqlChat/internal/auth"
+	"github.com/bertoxic/graphqlChat/internal/database"
+	"github.com/bertoxic/graphqlChat/pkg/config"
 )
 
 type App struct {
-	config      config.AppConfig
+	config      *config.AppConfig
 	DB          database.DatabaseRepo
 	authService auth.AuthService
 }
@@ -34,7 +36,7 @@ func getLongPathName(shortPath string) (string, error) {
 }
 
 //nolint:funlen
-func NewApp(ctx context.Context, cfg config.AppConfig) (*App, error) {
+func NewApp(ctx context.Context, cfg *config.AppConfig) (*App, error) {
 
 	app := &App{
 		config: cfg,
@@ -42,10 +44,14 @@ func NewApp(ctx context.Context, cfg config.AppConfig) (*App, error) {
 	if err := app.initialize(); err != nil {
 		return nil, err
 	}
+
 	if err := app.initializeDB(ctx); err != nil {
 		return nil, err
 	}
-	if err := app.initializeHandlers(ctx, app); err != nil {
+	if err := app.initializeRender(); err != nil {
+		return nil, err
+	}
+	if err := app.initializeHandlers(); err != nil {
 		return nil, err
 	}
 
@@ -53,7 +59,7 @@ func NewApp(ctx context.Context, cfg config.AppConfig) (*App, error) {
 }
 
 func (a *App) initialize() error {
-	if a.config.DataBase == nil || a.config.DataBase.URL == "" {
+	if a.config.DataBaseINFO == nil || a.config.DataBaseINFO.URL == "" {
 		return errorx.New(errorx.ErrCodeValidation, "Data configuration is invalid or missing", fmt.Errorf("could not load database config"))
 	}
 	return nil
@@ -63,35 +69,49 @@ func (a *App) initializeServices() error {
 	//initialize all my services here
 	userRepo := auth.NewUserRepo()
 	a.authService = auth.NewAuthService(userRepo)
-
 	return nil
 }
 
 func (a *App) initializeDB(ctx context.Context) error {
-	database, err := database.NewDatabase(ctx, a.config.DataBase.URL, "pgx")
+	newDatabase, err := database.NewDatabase(ctx, a.config.DataBaseINFO.URL, "pgx")
 	if err != nil {
-		return fmt.Errorf("failed to initialize database: %w", err)
+		return fmt.Errorf("failed to initialize newDatabase: %w", err)
 	}
-	err = database.Migrate()
+	err = newDatabase.Migrate()
 	if err != nil {
-		log.Fatalf("unable to run database migration: %v", err)
+		log.Fatalf("unable to run newDatabase migration: %v", err)
 	}
-	db, ok := database.(*drivers.PostgresDB)
-	if ok {
-		a.DB = postgres.NewPostgresDBRepo(a, db)
+	db, ok := newDatabase.(*drivers.PostgresDB)
+	if !ok {
+		return errorx.New(errorx.ErrCodeInternal, "the type assertion for databases failed", errorx.ErrDatabase)
 	}
-
+	a.DB = postgres.NewPostgresDBRepo(a.config, db)
 	return nil
 }
 
-func (a *App) initializeHandlers(ctx context.Context, app *App) error {
-	dbrepo := handlers.NewRepository(app, a.DB)
+func (a *App) initializeHandlers() error {
+	dbrepo := handlers.NewRepository(a.config, a.DB)
 	handlers.NewRepo(dbrepo)
 	return nil
 }
+func (a *App) initializeRender() error {
+	render.NewRenderer(a.config)
+	templateCache, err := render.CreateTemplateCache()
+	if err != nil {
+		appErr, ok := err.(*errorx.AppError)
+		if !ok {
+			return err
+		}
+		fmt.Printf("%s", appErr.Details)
+		return err
+	}
+	a.config.TemplateCache = templateCache
+	return nil
+}
+
 func LoadEnv() error {
 	// Check if environment variables are already set (e.g., in production)
-	//if os.Getenv("DB_HOST") != "" {
+	// if os.Getenv("DB_HOST") != "" {
 	//	fmt.Println("Environment variables already set, skipping .env file loading")
 	//	return nil
 	//}
@@ -117,7 +137,7 @@ func LoadEnv() error {
 	// Try to load .env from the possible locations
 	for _, path := range possiblePaths {
 		_, _ = filepath.Abs(path)
-		//fmt.Printf("Trying to load .env from: %s\n", absPath)
+		// fmt.Printf("Trying to load .env from: %s\n", absPath)
 		err := godotenv.Load(path)
 		if err == nil {
 			//fmt.Printf("Successfully loaded .env from: %s\n", absPath)

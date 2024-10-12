@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/bertoxic/graphqlChat/internal/app"
+	errorx "github.com/bertoxic/graphqlChat/internal/error"
 	"github.com/bertoxic/graphqlChat/pkg/config"
+	"github.com/bertoxic/graphqlChat/router"
 	"log"
+	"net/http"
 )
 
 func main() {
@@ -29,6 +32,13 @@ func main() {
 	//if err != nil {
 	//	log.Fatalf("unable to run database migration: %v", err)
 	//}
-
 	fmt.Println("Application started successfully")
+	//http.HandleFunc("/", handlers.Repo.HomePage)
+	mux := router.Routes()
+	err = http.ListenAndServe(":8080", mux)
+	if err != nil {
+		err = errorx.New(errorx.ErrInternal.Code, "", err)
+		fmt.Printf("%s", err.(*errorx.AppError).Details)
+	}
+
 }

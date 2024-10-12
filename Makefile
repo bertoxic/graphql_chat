@@ -24,3 +24,7 @@ migration:
 	@read -p "Enter migration name: " name; \
   	migrate create -ext sql -dir internal/migrations $$name
 
+generate:
+	go get github.com/99designs/gqlgen
+#    go run github.com/99designs/gqlgen generate
+	go generate ./...

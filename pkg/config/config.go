@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"golang.org/x/sys/windows"
+	"html/template"
 	"log"
 	"os"
 	"path/filepath"
@@ -12,9 +13,11 @@ import (
 )
 
 type AppConfig struct {
-	DataBase  *database
-	JWTSecret string
-	Port      string
+	DataBaseINFO  *database
+	JWTSecret     string
+	Port          string
+	UserCache     string
+	TemplateCache map[string]*template.Template
 }
 
 func getLongPathName(shortPath string) (string, error) {
@@ -27,7 +30,7 @@ func getLongPathName(shortPath string) (string, error) {
 }
 
 //nolint:funlen
-func NewConfig(jwtSecret, port string) (AppConfig, error) {
+func NewConfig(jwtSecret, port string) (*AppConfig, error) {
 	ex, err := os.Executable()
 	if err != nil {
 		//log.Fatalf("unable to get executable path: %v", err)
@@ -79,12 +82,12 @@ func NewConfig(jwtSecret, port string) (AppConfig, error) {
 		log.Fatal("unable to load config file")
 	}
 	if err != nil {
-		return AppConfig{}, err
+		return &AppConfig{}, err
 	}
-	return AppConfig{
-		DataBase:  &database{URL: os.Getenv("DATABASE_URL")},
-		JWTSecret: jwtSecret,
-		Port:      port,
+	return &AppConfig{
+		DataBaseINFO: &database{URL: os.Getenv("DATABASE_URL")},
+		JWTSecret:    jwtSecret,
+		Port:         port,
 	}, nil
 }
 
