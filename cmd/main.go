@@ -13,7 +13,8 @@ import (
 
 func main() {
 	ctx := context.Background()
-	err := app.LoadEnv()
+	//err := app.LoadEnv()
+	err := app.LoadEnvInProd()
 	if err != nil {
 		log.Fatal("unable to load .env file from any location 1")
 	}

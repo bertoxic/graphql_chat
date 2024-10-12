@@ -15,7 +15,6 @@ import (
 	"path/filepath"
 
 	"github.com/joho/godotenv"
-	"golang.org/x/sys/windows"
 
 	"github.com/bertoxic/graphqlChat/internal/auth"
 	"github.com/bertoxic/graphqlChat/internal/database"
@@ -31,14 +30,15 @@ type ServicesContainer struct {
 	UserAuthService auth.UserRepository
 }
 
-func getLongPathName(shortPath string) (string, error) {
-	longPath := make([]uint16, windows.MAX_LONG_PATH)
-	n, err := windows.GetLongPathName(&windows.StringToUTF16(shortPath)[0], &longPath[0], windows.MAX_LONG_PATH)
-	if err != nil {
-		return "", err
-	}
-	return windows.UTF16ToString(longPath[:n]), nil
-}
+//
+//func getLongPathName(shortPath string) (string, error) {
+//	longPath := make([]uint16, windows.MAX_LONG_PATH)
+//	n, err := windows.GetLongPathName(&windows.StringToUTF16(shortPath)[0], &longPath[0], windows.MAX_LONG_PATH)
+//	if err != nil {
+//		return "", err
+//	}
+//	return windows.UTF16ToString(longPath[:n]), nil
+//}
 
 //nolint:funlen
 func NewApp(ctx context.Context, cfg *config.AppConfig) (*App, error) {
@@ -47,6 +47,7 @@ func NewApp(ctx context.Context, cfg *config.AppConfig) (*App, error) {
 		Config:   cfg,
 		Services: &ServicesContainer{},
 	}
+	app.Config.InProduction = true
 	if err := app.initialize(); err != nil {
 		return nil, err
 	}
@@ -122,12 +123,51 @@ func (a *App) initializeRender() error {
 	return nil
 }
 
-func LoadEnv() error {
+//func LoadEnv() error {
+//	// Check if environment variables are already set (e.g., in production)
+//	// if os.Getenv("DB_HOST") != "" {
+//	//	fmt.Println("Environment variables already set, skipping .env file loading")
+//	//	return nil
+//	//}
+//
+//	// List of possible locations for the .env file
+//	possiblePaths := []string{
+//		".env",
+//		"../.env",
+//		"../../.env",
+//		"../../../.env",
+//	}
+//
+//	// Get the executable path
+//	ex, err := os.Executable()
+//	if err == nil {
+//		exePath := filepath.Dir(ex)
+//		possiblePaths = append(possiblePaths,
+//			filepath.Join(exePath, ".env"),
+//			filepath.Join(exePath, "../.env"),
+//		)
+//	}
+//
+//	// Try to load .env from the possible locations
+//	for _, path := range possiblePaths {
+//		_, _ = filepath.Abs(path)
+//		// fmt.Printf("Trying to load .env from: %s\n", absPath)
+//		err := godotenv.Load(path)
+//		if err == nil {
+//			//fmt.Printf("Successfully loaded .env from: %s\n", absPath)
+//			return nil
+//		}
+//	}
+//
+//	return fmt.Errorf("unable to load .env file from any location")
+//}
+
+func LoadEnvInProd() error {
 	// Check if environment variables are already set (e.g., in production)
-	// if os.Getenv("DB_HOST") != "" {
-	//	fmt.Println("Environment variables already set, skipping .env file loading")
-	//	return nil
-	//}
+	if os.Getenv("DB_HOST") != "" {
+		fmt.Println("Environment variables already set, skipping .env file loading")
+		return nil
+	}
 
 	// List of possible locations for the .env file
 	possiblePaths := []string{
@@ -149,11 +189,11 @@ func LoadEnv() error {
 
 	// Try to load .env from the possible locations
 	for _, path := range possiblePaths {
-		_, _ = filepath.Abs(path)
+		absPath, _ := filepath.Abs(path)
 		// fmt.Printf("Trying to load .env from: %s\n", absPath)
-		err := godotenv.Load(path)
+		err := godotenv.Load(absPath)
 		if err == nil {
-			//fmt.Printf("Successfully loaded .env from: %s\n", absPath)
+			// fmt.Printf("Successfully loaded .env from: %s\n", absPath)
 			return nil
 		}
 	}

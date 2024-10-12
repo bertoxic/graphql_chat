@@ -11,7 +11,6 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/stretchr/testify v1.9.0
 	github.com/vektah/gqlparser/v2 v2.5.17
-	golang.org/x/sys v0.26.0
 )
 
 require (

@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"golang.org/x/sys/windows"
 	"html/template"
 	"log"
 	"os"
@@ -14,34 +13,17 @@ import (
 
 type AppConfig struct {
 	DataBaseINFO  *database
+	InProduction  bool
 	JWTSecret     string
 	Port          string
 	UserCache     string
 	TemplateCache map[string]*template.Template
 }
 
-func getLongPathName(shortPath string) (string, error) {
-	longPath := make([]uint16, windows.MAX_LONG_PATH)
-	n, err := windows.GetLongPathName(&windows.StringToUTF16(shortPath)[0], &longPath[0], windows.MAX_LONG_PATH)
-	if err != nil {
-		return "", err
-	}
-	return windows.UTF16ToString(longPath[:n]), nil
-}
-
-//nolint:funlen
 func NewConfig(jwtSecret, port string) (*AppConfig, error) {
-	ex, err := os.Executable()
+	exePath, err := getExecutablePath()
 	if err != nil {
-		//log.Fatalf("unable to get executable path: %v", err)
-	}
-	exePath := filepath.Dir(ex)
-
-	// Convert short path to long path
-	longExePath, err := getLongPathName(exePath)
-	if err != nil {
-		log.Printf("Warning: Unable to get long path name: %v", err)
-		longExePath = exePath
+		log.Printf("Warning: Unable to get executable path: %v", err)
 	}
 
 	// Get the source file directory (for when running with 'go run')
@@ -50,10 +32,11 @@ func NewConfig(jwtSecret, port string) (*AppConfig, error) {
 		log.Fatal("unable to get source file path")
 	}
 	srcPath := filepath.Dir(filename)
+
 	// Try to load .env from multiple possible locations
 	envPaths := []string{
-		filepath.Join(longExePath, ".env"),
-		filepath.Join(longExePath, "../.env"),
+		filepath.Join(exePath, ".env"),
+		filepath.Join(exePath, "../.env"),
 		filepath.Join(srcPath, ".env"),
 		filepath.Join(srcPath, "../.env"),
 		filepath.Join(srcPath, "../../.env"),
@@ -63,32 +46,31 @@ func NewConfig(jwtSecret, port string) (*AppConfig, error) {
 	envLoaded := false
 	for _, path := range envPaths {
 		absPath, _ := filepath.Abs(path)
-		//fmt.Printf("Trying to load .env from: %s\n", absPath)
-		err = godotenv.Load(path)
+		err = godotenv.Load(absPath)
 		if err == nil {
 			fmt.Printf("Successfully loaded .env from: %s\n", absPath)
 			envLoaded = true
 			break
-		} else {
-			//fmt.Printf("Failed to load .env from %s: %v\n", absPath, err)
 		}
 	}
 
 	if !envLoaded {
-		log.Fatal("unable to load .env file from any location 3")
+		return nil, fmt.Errorf("unable to load .env file from any location")
 	}
 
-	if err != nil {
-		log.Fatal("unable to load config file")
-	}
-	if err != nil {
-		return &AppConfig{}, err
-	}
 	return &AppConfig{
 		DataBaseINFO: &database{URL: os.Getenv("DATABASE_URL")},
 		JWTSecret:    jwtSecret,
 		Port:         port,
 	}, nil
+}
+
+func getExecutablePath() (string, error) {
+	ex, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Dir(ex), nil
 }
 
 type database struct {
