@@ -27,6 +27,20 @@ type RegistrationInput struct {
 	Password string `bson:"password" json:"password"`
 }
 
+type LoginInput struct {
+	Email    string `bson:"email" json:"email"`
+	Username string `bson:"username" json:"username"`
+	Password string `bson:"password" json:"password"`
+}
+
+func (i LoginInput) Validate() error {
+	return nil
+}
+
+func (i LoginInput) Sanitize() {
+
+}
+
 func (in *RegistrationInput) Sanitize() {
 
 }

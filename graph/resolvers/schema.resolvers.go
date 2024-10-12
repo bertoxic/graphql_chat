@@ -7,24 +7,94 @@ package resolvers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/bertoxic/graphqlChat/graph"
 	"github.com/bertoxic/graphqlChat/graph/model"
+	"github.com/bertoxic/graphqlChat/internal/models"
 )
 
 // Register is the resolver for the register field.
 func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error) {
-	panic(fmt.Errorf("not implemented: Register - register"))
+	if r.AuthService == nil {
+		return nil, fmt.Errorf("AuthService is not initialized")
+	}
+
+	fmt.Println("Starting registration process") // Debug log
+
+	authInput := models.RegistrationInput{
+		Email:    input.Email,
+		Username: input.Username,
+		Password: input.Password,
+	}
+
+	fmt.Println("Calling AuthService.Register") // Debug log
+
+	result, err := r.AuthService.Register(ctx, authInput)
+	if err != nil {
+		fmt.Printf("Registration error: %v\n", err) // Debug log
+		return nil, buildBadRequestError(ctx, err)
+	}
+
+	fmt.Println("Registration successful") // Debug log
+
+	authResponse := &model.AuthResponse{
+		AccessToken: result.AccessToken, // Use the actual access token from the result
+		User: &model.User{
+			ID:        result.User.ID,
+			Username:  result.User.UserName,
+			Email:     result.User.Email,
+			CreatedAt: time.Now(), // Use the actual creation time
+		},
+	}
+
+	return authResponse, nil
 }
 
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error) {
-	panic(fmt.Errorf("not implemented: Login - login"))
+	authInput := models.LoginInput{
+		Email:    input.Email,
+		Password: input.Password,
+	}
+
+	result, err := r.AuthService.Login(ctx, authInput)
+	if err != nil {
+		return nil, err
+	}
+
+	authResponse := &model.AuthResponse{
+		AccessToken: result.AccessToken,
+		User: &model.User{
+			ID:        result.User.ID,
+			Username:  result.User.UserName,
+			Email:     result.User.Email,
+			CreatedAt: time.Now(),
+		},
+	}
+
+	return authResponse, nil
 }
 
 // GetUserByEmail is the resolver for the getUserByEmail field.
-func (r *queryResolver) GetUserByEmail(ctx context.Context) (*model.AuthResponse, error) {
-	panic(fmt.Errorf("not implemented: GetUserByEmail - getUserByEmail"))
+func (r *queryResolver) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
+	if r.UserService == nil {
+		return nil, fmt.Errorf("UserService is not initialized")
+	}
+
+	user, err := r.UserService.GetUserByEmail(ctx, email)
+	if err != nil {
+
+		return nil, buildBadRequestError(ctx, err)
+	}
+
+	userResponse := &model.User{
+		ID:        user.ID,
+		Username:  user.UserName,
+		Email:     user.Email,
+		CreatedAt: time.Now(),
+	}
+	return userResponse, nil
 }
 
 // Mutation returns graph.MutationResolver implementation.

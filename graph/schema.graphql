@@ -1,30 +1,33 @@
 scalar Time
 
-type  User {
+type User {
     id: String!
     username: String!
     email: String!
     createdAt: Time!
 }
-type AuthResponse{
+
+type AuthResponse {
     accessToken: String!
-    user:User!
+    user: User!
 }
-input RegisterInput{
+
+input RegisterInput {
     username: String!
     password: String!
-    email:String!
-}
-
-input LoginInput{
     email: String!
-    password:String!
 }
 
-type Query{
-    getUserByEmail: AuthResponse
+input LoginInput {
+    email: String!
+    password: String!
 }
-type Mutation{
-    register(input: RegisterInput!):AuthResponse!
-    login(input:LoginInput!):AuthResponse!
+
+type Query {
+    getUserByEmail(email: String!): User
+}
+
+type Mutation {
+    register(input: RegisterInput!): AuthResponse!
+    login(input: LoginInput!): AuthResponse!
 }

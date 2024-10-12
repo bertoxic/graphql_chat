@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/bertoxic/graphqlChat/internal/drivers"
+	errorx "github.com/bertoxic/graphqlChat/internal/error"
 	"github.com/bertoxic/graphqlChat/internal/models"
 	"github.com/bertoxic/graphqlChat/pkg/config"
 	"github.com/jackc/pgconn"
@@ -23,7 +24,7 @@ func NewPostgresDBRepo(a *config.AppConfig, db *drivers.PostgresDB) *PostgresDBR
 		DB:  db.Pool,
 	}
 }
-func (pr *PostgresDBRepo) CreateUser(ctx context.Context, user models.InputDetails) (*models.UserDetails, error) {
+func (pr *PostgresDBRepo) CreateUser(ctx context.Context, user models.RegistrationInput) (*models.UserDetails, error) {
 	// Start the transaction
 	tx, err := pr.DB.Begin(ctx)
 	if err != nil {
@@ -79,16 +80,14 @@ func (pr *PostgresDBRepo) GetUserByEmail(ctx context.Context, email string) (*mo
 }
 
 // Private function that performs the SQL query for creating a user within a transaction
-func (pr *PostgresDBRepo) createUserTx(ctx context.Context, tx pgx.Tx, user models.InputDetails) (*models.UserDetails, error) {
+func (pr *PostgresDBRepo) createUserTx(ctx context.Context, tx pgx.Tx, user models.RegistrationInput) (*models.UserDetails, error) {
 	query := `
 		INSERT INTO users (username, email, password) 
-		VALUES ($1, $2, $3, $4) 
-		RETURNING  username, email, password;
+		VALUES ($1, $2, $3) 
+		RETURNING   id, username, email, password;
 	`
-	userNew, ok := user.(*models.RegistrationInput)
-	if !ok {
+	userNew := user
 
-	}
 	// Struct to hold the created user's details
 	var userDetails models.UserDetails
 
@@ -97,6 +96,7 @@ func (pr *PostgresDBRepo) createUserTx(ctx context.Context, tx pgx.Tx, user mode
 		&userDetails.ID,
 		&userDetails.UserName,
 		&userDetails.Email,
+		&userDetails.Password,
 	)
 	if err != nil {
 		// Handle unique violation (email already exists)
@@ -130,7 +130,7 @@ func (pr *PostgresDBRepo) getUserByEmailTx(ctx context.Context, tx pgx.Tx, email
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("no user found with email: %s", email)
+			return nil, fmt.Errorf("no user found with email: %s, %w", email, errorx.ErrNotFound)
 		}
 		return nil, fmt.Errorf("error executing query: %w", err)
 	}

@@ -23,7 +23,7 @@ func main() {
 		log.Fatalf("unable to create new config: %v", err)
 	}
 
-	_, err = app.NewApp(ctx, newConfig)
+	app, err := app.NewApp(ctx, newConfig)
 	if err != nil {
 		log.Fatalf("unable to create new app: %v", err)
 	}
@@ -34,11 +34,11 @@ func main() {
 	//}
 	fmt.Println("Application started successfully")
 	//http.HandleFunc("/", handlers.Repo.HomePage)
-	mux := router.Routes()
+	mux := router.Routes(app)
 	err = http.ListenAndServe(":8080", mux)
 	if err != nil {
 		err = errorx.New(errorx.ErrInternal.Code, "", err)
-		fmt.Printf("%s", err.(*errorx.AppError).Details)
+		//fmt.Printf("%v", err.(*errorx.AppError).Details)
 	}
 
 }

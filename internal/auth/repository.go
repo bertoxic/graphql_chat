@@ -12,7 +12,7 @@ import (
 
 // UserRepository defines the interface for user-related database operations
 type UserRepository interface {
-	CreateUser(ctx context.Context, user RegistrationInput) (*models.UserDetails, error)
+	CreateUser(ctx context.Context, user *models.RegistrationInput) (*models.UserDetails, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.UserDetails, error)
 }
 
@@ -20,15 +20,17 @@ type UserRepo struct {
 	DB database.DatabaseRepo
 }
 
-func NewUserRepo() *UserRepo {
-	return &UserRepo{}
+func NewUserRepo(db database.DatabaseRepo) *UserRepo {
+	return &UserRepo{
+		DB: db,
+	}
 }
 
-func (us *UserRepo) CreateUser(ctx context.Context, user RegistrationInput) (*models.UserDetails, error) {
+func (us *UserRepo) CreateUser(ctx context.Context, user *models.RegistrationInput) (*models.UserDetails, error) {
 
 	// us.DB.CreateUser()
 	//TODO implement me
-	userDetails, err := us.DB.CreateUser(ctx, &user)
+	userDetails, err := us.DB.CreateUser(ctx, *user)
 	if err != nil {
 		return nil, err
 	}

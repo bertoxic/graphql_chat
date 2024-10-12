@@ -18,8 +18,8 @@ import (
 var passwordCost = config.PasswordCost
 
 type AuthService interface {
-	Register(ctx context.Context, input RegistrationInput) (*AuthResponse, error)
-	Login(ctx context.Context, input LoginInput) (*AuthResponse, error)
+	Register(ctx context.Context, input models.RegistrationInput) (*AuthResponse, error)
+	Login(ctx context.Context, input models.LoginInput) (*AuthResponse, error)
 }
 
 type authService struct {
@@ -34,22 +34,26 @@ func NewAuthService(userRepo UserRepository) AuthService {
 	}
 }
 
-func (s *authService) Register(ctx context.Context, input RegistrationInput) (*AuthResponse, error) {
+func (s *authService) Register(ctx context.Context, input models.RegistrationInput) (*AuthResponse, error) {
 	if err := input.Validate(); err != nil {
 		return nil, fmt.Errorf("%w: %v", errorx.New(errorx.ErrCodeValidation, "registration failed", err), err)
 	}
+	fmt.Sprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %v", input.Email)
 
 	input.Sanitize()
 
 	// Here you would typically:
 	// 1. Check if the user already exists
 	if _, err := s.userRepo.GetUserByEmail(ctx, input.Email); err != nil {
-		return nil, fmt.Errorf("%w %v", err, errorx.ErrNotFound)
+		if errors.As(err, &errorx.ErrNotFound) {
+
+		} else {
+			return nil, fmt.Errorf("%w %v", err, errorx.ErrNotFound)
+		}
 	}
 	// 2. Hash the password
 	// 3. Store the user in the database
 	// 4. Generate and return an access token
-
 	// For demonstration purposes:
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), passwordCost)
 	if err != nil {
@@ -58,28 +62,29 @@ func (s *authService) Register(ctx context.Context, input RegistrationInput) (*A
 
 	// TODO: Implement user storage and token generation
 	_ = hashedPassword // Placeholder to use hashedPassword
-	user := &RegistrationInput{
+	user := &models.RegistrationInput{
 		Email:    input.Email,
 		Username: input.Username,
 		Password: string(hashedPassword),
 	}
+	fmt.Sprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %v", user)
+
 	userDetails := &models.UserDetails{}
-	userDetails, err = s.userRepo.CreateUser(ctx, *user)
+	userDetails, err = s.userRepo.CreateUser(ctx, user)
 	if err != nil {
 		return nil, err
 	}
 	// Generate access token (implementation details omitted)
 	accessToken, err := generateAccessToken(user)
 	return &AuthResponse{
-		AccessToken: accessToken, // Replace with actual token generation
+		AccessToken: accessToken, // TODO:Replace with actual token generation
 		User:        *userDetails,
 	}, nil
 }
-func (s *authService) Login(ctx context.Context, input LoginInput) (*AuthResponse, error) {
+func (s *authService) Login(ctx context.Context, input models.LoginInput) (*AuthResponse, error) {
 	if err := input.Validate(); err != nil {
 		return nil, fmt.Errorf("%w: %v", errorx.ErrValidation, err)
 	}
-
 	input.Sanitize()
 
 	// Check if the user exists
@@ -106,7 +111,12 @@ func (s *authService) Login(ctx context.Context, input LoginInput) (*AuthRespons
 
 	return &AuthResponse{
 		AccessToken: accessToken,
-		User:        models.UserDetails{Email: input.Email},
+		User: models.UserDetails{
+			ID:       user.ID,
+			UserName: user.UserName,
+			Email:    user.Email,
+			Password: user.Password,
+		},
 	}, nil
 }
 func verifyPassword(password string) (bool, error) {

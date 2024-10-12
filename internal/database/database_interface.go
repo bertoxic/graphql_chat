@@ -6,6 +6,6 @@ import (
 )
 
 type DatabaseRepo interface {
-	CreateUser(ctx context.Context, user models.InputDetails) (*models.UserDetails, error)
+	CreateUser(ctx context.Context, user models.RegistrationInput) (*models.UserDetails, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.UserDetails, error)
 }

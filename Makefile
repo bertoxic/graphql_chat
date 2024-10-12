@@ -28,3 +28,7 @@ generate:
 	go get github.com/99designs/gqlgen
 #    go run github.com/99designs/gqlgen generate
 	go generate ./...
+
+run:
+	go run ./cmd/main.go
+

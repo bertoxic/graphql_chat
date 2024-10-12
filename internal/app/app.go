@@ -2,12 +2,14 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/bertoxic/graphqlChat/internal/database/postgres"
 	"github.com/bertoxic/graphqlChat/internal/drivers"
 	errorx "github.com/bertoxic/graphqlChat/internal/error"
 	"github.com/bertoxic/graphqlChat/internal/handlers"
 	"github.com/bertoxic/graphqlChat/internal/render"
+	"github.com/bertoxic/graphqlChat/pkg/config"
 	"log"
 	"os"
 	"path/filepath"
@@ -17,13 +19,16 @@ import (
 
 	"github.com/bertoxic/graphqlChat/internal/auth"
 	"github.com/bertoxic/graphqlChat/internal/database"
-	"github.com/bertoxic/graphqlChat/pkg/config"
 )
 
 type App struct {
-	config      *config.AppConfig
-	DB          database.DatabaseRepo
-	authService auth.AuthService
+	Config   *config.AppConfig
+	DB       database.DatabaseRepo
+	Services *ServicesContainer
+}
+type ServicesContainer struct {
+	AuthService     auth.AuthService
+	UserAuthService auth.UserRepository
 }
 
 func getLongPathName(shortPath string) (string, error) {
@@ -39,13 +44,17 @@ func getLongPathName(shortPath string) (string, error) {
 func NewApp(ctx context.Context, cfg *config.AppConfig) (*App, error) {
 
 	app := &App{
-		config: cfg,
+		Config:   cfg,
+		Services: &ServicesContainer{},
 	}
 	if err := app.initialize(); err != nil {
 		return nil, err
 	}
 
 	if err := app.initializeDB(ctx); err != nil {
+		return nil, err
+	}
+	if err := app.initializeServices(); err != nil {
 		return nil, err
 	}
 	if err := app.initializeRender(); err != nil {
@@ -59,21 +68,23 @@ func NewApp(ctx context.Context, cfg *config.AppConfig) (*App, error) {
 }
 
 func (a *App) initialize() error {
-	if a.config.DataBaseINFO == nil || a.config.DataBaseINFO.URL == "" {
-		return errorx.New(errorx.ErrCodeValidation, "Data configuration is invalid or missing", fmt.Errorf("could not load database config"))
+	if a.Config.DataBaseINFO == nil || a.Config.DataBaseINFO.URL == "" {
+		return errorx.New(errorx.ErrCodeValidation, "Data configuration is invalid or missing", fmt.Errorf("could not load database Config"))
 	}
 	return nil
 }
 
 func (a *App) initializeServices() error {
-	//initialize all my services here
-	userRepo := auth.NewUserRepo()
-	a.authService = auth.NewAuthService(userRepo)
+	//initialize all my Services here
+	userRepo := auth.NewUserRepo(a.DB)
+
+	a.Services.AuthService = auth.NewAuthService(userRepo)
+	a.Services.UserAuthService = auth.NewUserRepo(a.DB)
 	return nil
 }
 
 func (a *App) initializeDB(ctx context.Context) error {
-	newDatabase, err := database.NewDatabase(ctx, a.config.DataBaseINFO.URL, "pgx")
+	newDatabase, err := database.NewDatabase(ctx, a.Config.DataBaseINFO.URL, "pgx")
 	if err != nil {
 		return fmt.Errorf("failed to initialize newDatabase: %w", err)
 	}
@@ -85,27 +96,29 @@ func (a *App) initializeDB(ctx context.Context) error {
 	if !ok {
 		return errorx.New(errorx.ErrCodeInternal, "the type assertion for databases failed", errorx.ErrDatabase)
 	}
-	a.DB = postgres.NewPostgresDBRepo(a.config, db)
+	a.DB = postgres.NewPostgresDBRepo(a.Config, db)
 	return nil
 }
 
 func (a *App) initializeHandlers() error {
-	dbrepo := handlers.NewRepository(a.config, a.DB)
+	dbrepo := handlers.NewRepository(a.Config, a.DB)
 	handlers.NewRepo(dbrepo)
 	return nil
 }
+
 func (a *App) initializeRender() error {
-	render.NewRenderer(a.config)
+	render.NewRenderer(a.Config)
 	templateCache, err := render.CreateTemplateCache()
 	if err != nil {
-		appErr, ok := err.(*errorx.AppError)
+		var appErr *errorx.AppError
+		ok := errors.As(err, &appErr)
 		if !ok {
 			return err
 		}
 		fmt.Printf("%s", appErr.Details)
 		return err
 	}
-	a.config.TemplateCache = templateCache
+	a.Config.TemplateCache = templateCache
 	return nil
 }
 
