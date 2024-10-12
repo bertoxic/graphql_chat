@@ -60,7 +60,7 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 
 	result, err := r.AuthService.Login(ctx, authInput)
 	if err != nil {
-		return nil, err
+		return nil, buildBadRequestError(ctx, err)
 	}
 
 	authResponse := &model.AuthResponse{
