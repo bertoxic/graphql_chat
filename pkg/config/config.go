@@ -14,13 +14,18 @@ import (
 type AppConfig struct {
 	DataBaseINFO  *database
 	InProduction  bool
-	JWTSecret     string
+	JWT           JWT
 	Port          string
 	UserCache     string
 	TemplateCache map[string]*template.Template
 }
 
-func NewConfig(jwtSecret, port string) (*AppConfig, error) {
+type JWT struct {
+	Secret []byte
+	Issuer string
+}
+
+func NewConfig(fileName, port string) (*AppConfig, error) {
 	exePath, err := getExecutablePath()
 	if err != nil {
 		log.Printf("Warning: Unable to get executable path: %v", err)
@@ -33,14 +38,21 @@ func NewConfig(jwtSecret, port string) (*AppConfig, error) {
 	}
 	srcPath := filepath.Dir(filename)
 
-	// Try to load .env from multiple possible locations
+	// Trying to load .env from multiple possible locations
 	envPaths := []string{
-		filepath.Join(exePath, ".env"),
-		filepath.Join(exePath, "../.env"),
-		filepath.Join(srcPath, ".env"),
-		filepath.Join(srcPath, "../.env"),
-		filepath.Join(srcPath, "../../.env"),
-		".env", // Try current working directory as well
+		//filepath.Join(exePath, ".env"),
+		filepath.Join(exePath, fmt.Sprintf("%s", fileName)),
+		filepath.Join(exePath, fmt.Sprintf("../%s", fileName)),
+		filepath.Join(srcPath, fmt.Sprintf("%s", fileName)),
+		filepath.Join(srcPath, fmt.Sprintf("../%s", fileName)),
+		filepath.Join(srcPath, fmt.Sprintf("../../%s", fileName)),
+		filepath.Join(exePath, fmt.Sprintf("../../%s", fileName)),
+		fmt.Sprintf("%s", fileName),
+		//filepath.Join(exePath, "../.env"),
+		//filepath.Join(srcPath, ".env"),
+		//filepath.Join(srcPath, "../.env"),
+		//filepath.Join(srcPath, "../../.env"),
+		fileName, // Trying current working directory as well
 	}
 
 	envLoaded := false
@@ -55,13 +67,16 @@ func NewConfig(jwtSecret, port string) (*AppConfig, error) {
 	}
 
 	if !envLoaded {
-		return nil, fmt.Errorf("unable to load .env file from any location")
+		return nil, fmt.Errorf("unable to load %s file from any location", fileName)
 	}
 
 	return &AppConfig{
 		DataBaseINFO: &database{URL: os.Getenv("DATABASE_URL")},
-		JWTSecret:    jwtSecret,
-		Port:         port,
+		JWT: JWT{
+			Secret: []byte(os.Getenv("JWT_SECRET")),
+			Issuer: os.Getenv("ISSUER"),
+		},
+		Port: port,
 	}, nil
 }
 

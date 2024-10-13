@@ -7,6 +7,7 @@ import (
 	errorx "github.com/bertoxic/graphqlChat/internal/error"
 	"github.com/bertoxic/graphqlChat/internal/models"
 	"github.com/bertoxic/graphqlChat/pkg/config"
+	"net/http"
 	"net/mail"
 	"regexp"
 	"strings"
@@ -25,11 +26,24 @@ type AuthService interface {
 type authService struct {
 	// Add dependencies here, e.g., database, logger, etc.
 	userRepo UserRepository
+	Service  TokenService
+}
+type AuthToken struct {
+	TokenID string
+	Sub     string
 }
 
-func NewAuthService(userRepo UserRepository) AuthService {
+type TokenService interface {
+	ParseTokenFromRequest(ctx context.Context, r *http.Request) (AuthToken, error)
+	ParseToken(ctx context.Context, payload string) (AuthToken, error)
+	CreateAccessToken(ctx context.Context, user models.UserDetails) (string, error)
+	CreateRefreshToken(ctx context.Context, user models.UserDetails, tokenID string) (string, error)
+}
+
+func NewAuthService(userRepo UserRepository, service TokenService) AuthService {
 	return &authService{
 		userRepo: userRepo,
+		Service:  service,
 		// Initialize dependencies
 	}
 }
@@ -141,22 +155,22 @@ func (in *RegistrationInput) Sanitize() {
 	in.Username = strings.TrimSpace(in.Username)
 }
 func (in *RegistrationInput) Validate() error {
-	var errors []string
+	var errorList []string
 
 	if err := ValidateEmail(in.Email); err != nil {
-		errors = append(errors, fmt.Sprintf("Email: %v", err))
+		errorList = append(errorList, fmt.Sprintf("Email: %v", err))
 	}
 
 	if err := validateUsername(in.Username); err != nil {
-		errors = append(errors, fmt.Sprintf("Username: %v", err))
+		errorList = append(errorList, fmt.Sprintf("Username: %v", err))
 	}
 
 	if err := validatePassword(in.Password); err != nil {
-		errors = append(errors, fmt.Sprintf("Password: %v", err))
+		errorList = append(errorList, fmt.Sprintf("Password: %v", err))
 	}
 
-	if len(errors) > 0 {
-		return fmt.Errorf("%w: %s", errorx.ErrValidation, strings.Join(errors, "; "))
+	if len(errorList) > 0 {
+		return fmt.Errorf("%w: %s", errorx.ErrValidation, strings.Join(errorList, "; "))
 	}
 
 	return nil

@@ -50,6 +50,7 @@ const (
 	ErrCodeInvalidScope       ErrorCode = 1107
 	ErrCodeMFARequired        ErrorCode = 1108
 	ErrCodePasswordExpired    ErrorCode = 1109
+	ErrCodeNoUserIdInContext  ErrorCode = 1110
 
 	// Input/Validation Errors (1200-1299)
 	ErrCodeBadRequest       ErrorCode = 1200
@@ -144,7 +145,7 @@ func (e *AppError) Error() string {
 	if e.Err != nil {
 		return fmt.Sprintf("[%d] %s: %v", e.Code, e.Message, e.Err)
 	}
-	return fmt.Sprintf("[%d] %s", e.Code, e.Message)
+	return fmt.Sprintf("[%d] %s", e.Code, e.Message, e.Details)
 }
 
 // Unwrap implements the errors.Wrapper interface

@@ -19,7 +19,7 @@ func main() {
 		log.Fatal("unable to load .env file from any location 1")
 	}
 
-	newConfig, err := config.NewConfig("bert", ":80")
+	newConfig, err := config.NewConfig(".env", ":80")
 	if err != nil {
 		log.Fatalf("unable to create new config: %v", err)
 	}
