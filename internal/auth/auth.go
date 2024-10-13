@@ -52,7 +52,6 @@ func (s *authService) Register(ctx context.Context, input models.RegistrationInp
 	if err := input.Validate(); err != nil {
 		return nil, fmt.Errorf("%w: %v", errorx.New(errorx.ErrCodeValidation, "registration failed", err), err)
 	}
-	fmt.Sprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %v", input.Email)
 
 	input.Sanitize()
 
@@ -81,7 +80,6 @@ func (s *authService) Register(ctx context.Context, input models.RegistrationInp
 		Username: input.Username,
 		Password: string(hashedPassword),
 	}
-	fmt.Sprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %v", user)
 
 	userDetails := &models.UserDetails{}
 	userDetails, err = s.userRepo.CreateUser(ctx, user)
@@ -89,7 +87,8 @@ func (s *authService) Register(ctx context.Context, input models.RegistrationInp
 		return nil, err
 	}
 	// Generate access token (implementation details omitted)
-	accessToken, err := generateAccessToken(user)
+
+	accessToken, err := s.Service.CreateAccessToken(ctx, *userDetails)
 	return &AuthResponse{
 		AccessToken: accessToken, // TODO:Replace with actual token generation
 		User:        *userDetails,
@@ -118,7 +117,11 @@ func (s *authService) Login(ctx context.Context, input models.LoginInput) (*Auth
 		return nil, fmt.Errorf("%w , %w, %w", err, errorx.ErrInvalidCredentials)
 	}
 	// Generate access token
-	accessToken, err := generateAccessToken(&input)
+	accessToken, err := s.Service.CreateAccessToken(ctx, *user)
+	if err != nil {
+		return nil, err
+	}
+	//accessToken, err := generateAccessToken(&input)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate access token: %w, %w", err, errorx.ErrInternal)
 	}

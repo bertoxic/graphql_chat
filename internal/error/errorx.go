@@ -145,7 +145,7 @@ func (e *AppError) Error() string {
 	if e.Err != nil {
 		return fmt.Sprintf("[%d] %s: %v", e.Code, e.Message, e.Err)
 	}
-	return fmt.Sprintf("[%d] %s", e.Code, e.Message, e.Details)
+	return fmt.Sprintf("[%d] %s", e.Code, e.Message)
 }
 
 // Unwrap implements the errors.Wrapper interface

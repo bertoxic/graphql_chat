@@ -20,7 +20,7 @@ type RefreshToken struct {
 }
 
 type CreateRefreshTokenParams struct {
-	UserId string
+	UserID string
 	Name   string
 }
 type RefreshTokenRepo interface {

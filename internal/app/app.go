@@ -8,6 +8,7 @@ import (
 	"github.com/bertoxic/graphqlChat/internal/drivers"
 	errorx "github.com/bertoxic/graphqlChat/internal/error"
 	"github.com/bertoxic/graphqlChat/internal/handlers"
+	"github.com/bertoxic/graphqlChat/internal/jwt"
 	"github.com/bertoxic/graphqlChat/internal/render"
 	"github.com/bertoxic/graphqlChat/pkg/config"
 	"log"
@@ -78,8 +79,8 @@ func (a *App) initialize() error {
 func (a *App) initializeServices() error {
 	//initialize all my Services here
 	userRepo := auth.NewUserRepo(a.DB)
-
-	a.Services.AuthService = auth.NewAuthService(userRepo)
+	tokenService := jwt.NewTokenService(a.Config)
+	a.Services.AuthService = auth.NewAuthService(userRepo, tokenService)
 	a.Services.UserAuthService = auth.NewUserRepo(a.DB)
 	return nil
 }

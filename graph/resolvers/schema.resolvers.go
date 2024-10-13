@@ -7,6 +7,7 @@ package resolvers
 import (
 	"context"
 	"fmt"
+	"github.com/bertoxic/graphqlChat/internal/middlewares"
 	"time"
 
 	"github.com/bertoxic/graphqlChat/graph"
@@ -78,6 +79,10 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 
 // GetUserByEmail is the resolver for the getUserByEmail field.
 func (r *queryResolver) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
+	userid, err := middlewares.GetUserIDFromContext(ctx)
+	if err != nil {
+		return nil, buildBadRequestError(ctx, err)
+	}
 	if r.UserService == nil {
 		return nil, fmt.Errorf("UserService is not initialized")
 	}
@@ -89,7 +94,7 @@ func (r *queryResolver) GetUserByEmail(ctx context.Context, email string) (*mode
 	}
 
 	userResponse := &model.User{
-		ID:        user.ID,
+		ID:        fmt.Sprintf("userid iz: %s", userid),
 		Username:  user.UserName,
 		Email:     user.Email,
 		CreatedAt: time.Now(),

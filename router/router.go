@@ -21,11 +21,11 @@ func Routes(app *app.App) http.Handler {
 	mux.Use(middleware.Logger)
 	mux.Use(middleware.RequestID)
 	mux.Use(middleware.Recoverer)
-	mux.Use(middleware.Timeout(time.Second * 45))
-	mux.Get("/", handlers.Repo.HomePage)
 	tokenService := jwt.NewTokenService(app.Config)
 	mux.Use(middlewares.AuthMiddleWare(tokenService))
-	mux.Handle("/play", playground.Handler("Graphqlchat", "/query"))
+	mux.Use(middleware.Timeout(time.Second * 45))
+	mux.Get("/", handlers.Repo.HomePage)
+	mux.Handle("/play", playground.Handler("Graphql-chat", "/query"))
 	mux.Handle("/query", handler.NewDefaultServer(
 		graph.NewExecutableSchema(
 			graph.Config{
