@@ -11,12 +11,51 @@ type AuthResponse struct {
 	User        *User  `json:"user"`
 }
 
+type CreatePostInput struct {
+	Title    *string `json:"title,omitempty"`
+	Content  string  `json:"content"`
+	ImageURL *string `json:"imageUrl,omitempty"`
+	AudioURL *string `json:"audioUrl,omitempty"`
+}
+
 type LoginInput struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
 type Mutation struct {
+}
+
+type Post struct {
+	ID        string         `json:"id"`
+	UserID    string         `json:"userId"`
+	Title     *string        `json:"title,omitempty"`
+	Content   string         `json:"content"`
+	ImageURL  *string        `json:"imageUrl,omitempty"`
+	VideoURL  *string        `json:"videoUrl,omitempty"`
+	AudioURL  *string        `json:"audioUrl,omitempty"`
+	IsEdited  *bool          `json:"isEdited,omitempty"`
+	IsDraft   *bool          `json:"isDraft,omitempty"`
+	ParentID  *string        `json:"parentId,omitempty"`
+	CreatedAt time.Time      `json:"createdAt"`
+	UpdatedAt time.Time      `json:"updatedAt"`
+	Likes     int            `json:"likes"`
+	Reposts   int            `json:"reposts"`
+	Tags      []string       `json:"tags"`
+	Children  []*Post        `json:"children,omitempty"`
+	Analytics *PostAnalytics `json:"analytics,omitempty"`
+}
+
+type PostAnalytics struct {
+	Views         int `json:"views"`
+	Reach         int `json:"reach"`
+	CommentsCount int `json:"commentsCount"`
+	Shares        int `json:"shares"`
+}
+
+type PostResponse struct {
+	Success bool    `json:"success"`
+	Message *string `json:"message,omitempty"`
 }
 
 type Query struct {
@@ -33,4 +72,10 @@ type User struct {
 	Username  string    `json:"username"`
 	Email     string    `json:"email"`
 	CreatedAt time.Time `json:"createdAt"`
+}
+
+type UserPostStats struct {
+	TotalPosts   int `json:"totalPosts"`
+	TotalLikes   int `json:"totalLikes"`
+	TotalReposts int `json:"totalReposts"`
 }

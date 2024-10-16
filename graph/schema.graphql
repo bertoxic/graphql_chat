@@ -7,27 +7,8 @@ type User {
     createdAt: Time!
 }
 
-type AuthResponse {
-    accessToken: String!
-    user: User!
-}
-
-input RegisterInput {
-    username: String!
-    password: String!
-    email: String!
-}
-
-input LoginInput {
-    email: String!
-    password: String!
-}
 
 type Query {
     getUserByEmail(email: String!): User
 }
 
-type Mutation {
-    register(input: RegisterInput!): AuthResponse!
-    login(input: LoginInput!): AuthResponse!
-}

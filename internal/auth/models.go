@@ -2,8 +2,6 @@ package auth
 
 import "github.com/bertoxic/graphqlChat/internal/models"
 
-// models.go
-
 type InputDetails interface {
 	Sanitize()
 	Validate() error

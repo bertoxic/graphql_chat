@@ -24,7 +24,6 @@ type AuthService interface {
 }
 
 type authService struct {
-	// Add dependencies here, e.g., database, logger, etc.
 	userRepo UserRepository
 	Service  TokenService
 }
@@ -44,7 +43,6 @@ func NewAuthService(userRepo UserRepository, service TokenService) AuthService {
 	return &authService{
 		userRepo: userRepo,
 		Service:  service,
-		// Initialize dependencies
 	}
 }
 
@@ -55,8 +53,6 @@ func (s *authService) Register(ctx context.Context, input models.RegistrationInp
 
 	input.Sanitize()
 
-	// Here you would typically:
-	// 1. Check if the user already exists
 	if _, err := s.userRepo.GetUserByEmail(ctx, input.Email); err != nil {
 		if errors.As(err, &errorx.ErrNotFound) {
 
@@ -64,17 +60,14 @@ func (s *authService) Register(ctx context.Context, input models.RegistrationInp
 			return nil, fmt.Errorf("%w %v", err, errorx.ErrNotFound)
 		}
 	}
-	// 2. Hash the password
-	// 3. Store the user in the database
-	// 4. Generate and return an access token
-	// For demonstration purposes:
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), passwordCost)
 	if err != nil {
 		return nil, fmt.Errorf("%w: failed to hash password", errorx.ErrInternal)
 	}
 
 	// TODO: Implement user storage and token generation
-	_ = hashedPassword // Placeholder to use hashedPassword
+	_ = hashedPassword
 	user := &models.RegistrationInput{
 		Email:    input.Email,
 		Username: input.Username,
@@ -86,11 +79,10 @@ func (s *authService) Register(ctx context.Context, input models.RegistrationInp
 	if err != nil {
 		return nil, err
 	}
-	// Generate access token (implementation details omitted)
 
 	accessToken, err := s.Service.CreateAccessToken(ctx, *userDetails)
 	return &AuthResponse{
-		AccessToken: accessToken, // TODO:Replace with actual token generation
+		AccessToken: accessToken,
 		User:        *userDetails,
 	}, nil
 }
@@ -100,7 +92,6 @@ func (s *authService) Login(ctx context.Context, input models.LoginInput) (*Auth
 	}
 	input.Sanitize()
 
-	// Check if the user exists
 	user, err := s.userRepo.GetUserByEmail(ctx, input.Email)
 	if err != nil {
 		if errors.Is(err, errorx.ErrNotFound) {
@@ -110,13 +101,11 @@ func (s *authService) Login(ctx context.Context, input models.LoginInput) (*Auth
 	}
 
 	// TODO: Implement password verification here
-	//hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), passwordCost)
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password))
 	if err != nil {
 		return nil, fmt.Errorf("%w , %w, %w", err, errorx.ErrInvalidCredentials)
 	}
-	// Generate access token
 	accessToken, err := s.Service.CreateAccessToken(ctx, *user)
 	if err != nil {
 		return nil, err

@@ -28,7 +28,7 @@ func NewUserRepo(db database.DatabaseRepo) *UserRepo {
 
 func (us *UserRepo) CreateUser(ctx context.Context, user *models.RegistrationInput) (*models.UserDetails, error) {
 
-	// us.DB.CreateUser()
+	// us.Repo.CreateUser()
 	//TODO implement me
 	userDetails, err := us.DB.CreateUser(ctx, *user)
 	if err != nil {

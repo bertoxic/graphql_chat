@@ -5,12 +5,14 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/bertoxic/graphqlChat/internal/drivers"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 type Database interface {
 	Ping(ctx context.Context) error
 	Close()
 	Migrate() error
+	GetPoolConn() *pgxpool.Pool
 }
 
 func NewDatabase(ctx context.Context, dsn string, driver string) (Database, error) {
@@ -22,7 +24,7 @@ func NewDatabase(ctx context.Context, dsn string, driver string) (Database, erro
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to mysql: %w", err)
 		}
-		// return &SqlDB{DB: db}, nil
+		// return &SqlDB{Repo: db}, nil
 		return nil, nil
 
 	default:

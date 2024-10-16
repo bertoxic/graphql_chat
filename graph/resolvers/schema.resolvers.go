@@ -7,106 +7,338 @@ package resolvers
 import (
 	"context"
 	"fmt"
-	"github.com/bertoxic/graphqlChat/internal/middlewares"
-	"time"
 
 	"github.com/bertoxic/graphqlChat/graph"
 	"github.com/bertoxic/graphqlChat/graph/model"
-	"github.com/bertoxic/graphqlChat/internal/models"
+	"github.com/bertoxic/graphqlChat/internal/middlewares"
+	"github.com/bertoxic/graphqlChat/internal/posts"
 )
 
-// Register is the resolver for the register field.
-func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error) {
-	if r.AuthService == nil {
-		return nil, fmt.Errorf("AuthService is not initialized")
+// CreatePost is the resolver for the createPost field.
+func (r *mutationResolver) CreatePost(ctx context.Context, input model.CreatePostInput, userID string, parentID *string) (*model.Post, error) {
+	inputPost := posts.CreatePostInput{
+		Title:    input.Title,
+		Content:  input.Content,
+		ImageURL: input.ImageURL, // No need to create a new string, can pass nil directly
+		AudioURL: input.AudioURL, // Fixed: was using ImageURL instead of AudioURL
 	}
 
-	fmt.Println("Starting registration process") // Debug log
-
-	authInput := models.RegistrationInput{
-		Email:    input.Email,
-		Username: input.Username,
-		Password: input.Password,
-	}
-
-	fmt.Println("Calling AuthService.Register") // Debug log
-
-	result, err := r.AuthService.Register(ctx, authInput)
+	post, err := r.PostService.CreatePost(ctx, inputPost, userID, parentID)
 	if err != nil {
-		fmt.Printf("Registration error: %v\n", err) // Debug log
 		return nil, buildBadRequestError(ctx, err)
 	}
-
-	fmt.Println("Registration successful") // Debug log
-
-	authResponse := &model.AuthResponse{
-		AccessToken: result.AccessToken, // Use the actual access token from the result
-		User: &model.User{
-			ID:        result.User.ID,
-			Username:  result.User.UserName,
-			Email:     result.User.Email,
-			CreatedAt: time.Now(), // Use the actual creation time
-		},
-	}
-
-	return authResponse, nil
+	r.PostService.HandleNullablePostFields(post)
+	return convertToModelPost(post), nil
 }
 
-// Login is the resolver for the login field.
-func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error) {
-	authInput := models.LoginInput{
-		Email:    input.Email,
-		Password: input.Password,
-	}
-
-	result, err := r.AuthService.Login(ctx, authInput)
+// UpdatePost is the resolver for the updatePost field.
+func (r *mutationResolver) UpdatePost(ctx context.Context, postID string, input model.CreatePostInput) (*model.Post, error) {
+	_, err := middlewares.GetUserIDFromContext(ctx)
 	if err != nil {
 		return nil, buildBadRequestError(ctx, err)
 	}
 
-	authResponse := &model.AuthResponse{
-		AccessToken: result.AccessToken,
-		User: &model.User{
-			ID:        result.User.ID,
-			Username:  result.User.UserName,
-			Email:     result.User.Email,
-			CreatedAt: time.Now(),
-		},
+	updateInput := posts.CreatePostInput{
+		Title:    input.Title,
+		Content:  input.Content,
+		ImageURL: input.ImageURL,
+		AudioURL: input.AudioURL,
 	}
 
-	return authResponse, nil
+	updatedPost, err := r.PostService.UpdatePost(ctx, postID, updateInput)
+	r.PostService.HandleNullablePostFields(updatedPost)
+
+	if err != nil {
+		return nil, buildBadRequestError(ctx, err)
+	}
+
+	return convertToModelPost(updatedPost), nil
+}
+
+// DeletePost is the resolver for the deletePost field.
+func (r *mutationResolver) DeletePost(ctx context.Context, postID string) (*model.PostResponse, error) {
+	_, err := middlewares.GetUserIDFromContext(ctx)
+	if err != nil {
+		return &model.PostResponse{
+			Success: false,
+		}, buildBadRequestError(ctx, err)
+	}
+
+	postresp, err := r.PostService.DeletePost(ctx, postID)
+	response := &model.PostResponse{
+		Success: postresp.Success,
+		Message: &postresp.Message,
+	}
+	if err != nil {
+		return response, buildBadRequestError(ctx, err)
+	}
+
+	return response, nil
+}
+
+// Repost is the resolver for the repost field.
+func (r *mutationResolver) Repost(ctx context.Context, postID string, userID string) (*model.Post, error) {
+	repostedPost, err := r.PostService.Repost(ctx, postID, userID)
+	if err != nil {
+		return nil, buildBadRequestError(ctx, err)
+	}
+
+	return convertToModelPost(repostedPost), nil
+}
+
+// AddComment is the resolver for the addComment field.
+func (r *mutationResolver) AddComment(ctx context.Context, postID string, input model.CreatePostInput, userID string) (*model.Post, error) {
+	commentInput := posts.CreatePostInput{
+		Title:    input.Title,
+		Content:  input.Content,
+		ImageURL: input.ImageURL,
+		AudioURL: input.AudioURL,
+	}
+
+	comment, err := r.PostService.AddComment(ctx, postID, commentInput, userID)
+	if err != nil {
+		return nil, buildBadRequestError(ctx, err)
+	}
+
+	return convertToModelPost(comment), nil
+}
+
+// LikePost is the resolver for the likePost field.
+func (r *mutationResolver) LikePost(ctx context.Context, postID string, userID string) (*model.PostResponse, error) {
+	postresp, err := r.PostService.LikePost(ctx, postID, userID)
+	response := &model.PostResponse{
+		Success: postresp.Success,
+		Message: &postresp.Message,
+	}
+	if err != nil {
+		return response, buildBadRequestError(ctx, err)
+	}
+
+	return response, nil
+}
+
+// UnlikePost is the resolver for the unlikePost field.
+func (r *mutationResolver) UnlikePost(ctx context.Context, postID string, userID string) (*model.PostResponse, error) {
+	postresp, err := r.PostService.UnlikePost(ctx, postID, userID)
+	response := &model.PostResponse{
+		Success: postresp.Success,
+		Message: &postresp.Message,
+	}
+	if err != nil {
+		return response, buildBadRequestError(ctx, err)
+	}
+
+	return response, nil
+}
+
+// TagUserInPost is the resolver for the tagUserInPost field.
+func (r *mutationResolver) TagUserInPost(ctx context.Context, postID string, taggedUserID string) (*model.PostResponse, error) {
+	postresp, err := r.PostService.TagUserInPost(ctx, postID, taggedUserID)
+	response := &model.PostResponse{
+		Success: postresp.Success,
+		Message: &postresp.Message,
+	}
+	if err != nil {
+		return response, buildBadRequestError(ctx, err)
+	}
+
+	return response, nil
+}
+
+// BookmarkPost is the resolver for the bookmarkPost field.
+func (r *mutationResolver) BookmarkPost(ctx context.Context, postID string, userID string) (*model.PostResponse, error) {
+	panic(fmt.Errorf("not implemented: BookmarkPost - bookmarkPost"))
+}
+
+// RemoveBookmark is the resolver for the removeBookmark field.
+func (r *mutationResolver) RemoveBookmark(ctx context.Context, postID string, userID string) (*model.PostResponse, error) {
+	panic(fmt.Errorf("not implemented: RemoveBookmark - removeBookmark"))
 }
 
 // GetUserByEmail is the resolver for the getUserByEmail field.
 func (r *queryResolver) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
-	userid, err := middlewares.GetUserIDFromContext(ctx)
+	userID, err := middlewares.GetUserIDFromContext(ctx)
 	if err != nil {
 		return nil, buildBadRequestError(ctx, err)
 	}
+
 	if r.UserService == nil {
 		return nil, fmt.Errorf("UserService is not initialized")
 	}
 
 	user, err := r.UserService.GetUserByEmail(ctx, email)
 	if err != nil {
-
 		return nil, buildBadRequestError(ctx, err)
 	}
 
-	userResponse := &model.User{
-		ID:        fmt.Sprintf("userid iz: %s", userid),
-		Username:  user.UserName,
-		Email:     user.Email,
-		CreatedAt: time.Now(),
-	}
-	return userResponse, nil
+	return &model.User{
+		ID:       userID,
+		Username: user.UserName,
+		Email:    user.Email,
+	}, nil
 }
 
-// Mutation returns graph.MutationResolver implementation.
-func (r *Resolver) Mutation() graph.MutationResolver { return &mutationResolver{r} }
+// GetPost is the resolver for the getPost field.
+func (r *queryResolver) GetPost(ctx context.Context, postID string) (*model.Post, error) {
+	post, err := r.PostService.GetPost(ctx, postID)
+	if err != nil {
+		return nil, buildBadRequestError(ctx, err)
+	}
+
+	return convertToModelPost(post), nil
+}
+
+// GetAllUserPosts is the resolver for the getAllUserPosts field.
+func (r *queryResolver) GetAllUserPosts(ctx context.Context, userID string) ([]*model.Post, error) {
+	panic(fmt.Errorf("not implemented: GetAllUserPosts - getAllUserPosts"))
+}
+
+// GetPostComments is the resolver for the getPostComments field.
+func (r *queryResolver) GetPostComments(ctx context.Context, postID string) ([]*model.Post, error) {
+	comments, err := r.PostService.GetPostComments(ctx, postID)
+	if err != nil {
+		return nil, buildBadRequestError(ctx, err)
+	}
+
+	modelComments := make([]*model.Post, len(comments))
+	for i, comment := range comments {
+		modelComments[i] = convertToModelPost(comment)
+	}
+
+	return modelComments, nil
+}
+
+// GetUserFeed is the resolver for the getUserFeed field.
+func (r *queryResolver) GetUserFeed(ctx context.Context, userID string) ([]*model.Post, error) {
+	posts, err := r.PostService.GetUserFeed(ctx, userID)
+	if err != nil {
+		return nil, buildBadRequestError(ctx, err)
+	}
+
+	modelPosts := make([]*model.Post, len(posts))
+	for i, post := range posts {
+		modelPosts[i] = convertToModelPost(post)
+	}
+
+	return modelPosts, nil
+}
+
+// GetUsersWhoLikedPost is the resolver for the getUsersWhoLikedPost field.
+func (r *queryResolver) GetUsersWhoLikedPost(ctx context.Context, postID string) ([]string, error) {
+	users, err := r.PostService.GetUsersWhoLikedPost(ctx, postID)
+	if err != nil {
+		return nil, buildBadRequestError(ctx, err)
+	}
+
+	return users, nil
+}
+
+// SearchPosts is the resolver for the searchPosts field.
+func (r *queryResolver) SearchPosts(ctx context.Context, query string) ([]*model.Post, error) {
+	posts, err := r.PostService.SearchPosts(ctx, query)
+	if err != nil {
+		return nil, buildBadRequestError(ctx, err)
+	}
+
+	modelPosts := make([]*model.Post, len(posts))
+	for i, post := range posts {
+		modelPosts[i] = convertToModelPost(post)
+	}
+
+	return modelPosts, nil
+}
+
+// GetTrendingPosts is the resolver for the getTrendingPosts field.
+func (r *queryResolver) GetTrendingPosts(ctx context.Context, limit int) ([]*model.Post, error) {
+	posts, err := r.PostService.GetTrendingPosts(ctx, limit)
+	if err != nil {
+		return nil, buildBadRequestError(ctx, err)
+	}
+
+	modelPosts := make([]*model.Post, len(posts))
+	for i, post := range posts {
+		modelPosts[i] = convertToModelPost(post)
+	}
+
+	return modelPosts, nil
+}
+
+// GetPostsByTag is the resolver for the getPostsByTag field.
+func (r *queryResolver) GetPostsByTag(ctx context.Context, tag string) ([]*model.Post, error) {
+	posts, err := r.PostService.GetPostsByTag(ctx, tag)
+	if err != nil {
+		return nil, buildBadRequestError(ctx, err)
+	}
+
+	modelPosts := make([]*model.Post, len(posts))
+	for i, post := range posts {
+		modelPosts[i] = convertToModelPost(post)
+	}
+
+	return modelPosts, nil
+}
+
+// GetUserBookmarkedPosts is the resolver for the getUserBookmarkedPosts field.
+func (r *queryResolver) GetUserBookmarkedPosts(ctx context.Context, userID string) ([]*model.Post, error) {
+	posts, err := r.PostService.GetUserBookmarkedPosts(ctx, userID)
+	if err != nil {
+		return nil, buildBadRequestError(ctx, err)
+	}
+
+	modelPosts := make([]*model.Post, len(posts))
+	for i, post := range posts {
+		modelPosts[i] = convertToModelPost(post)
+	}
+
+	return modelPosts, nil
+}
+
+// GetDrafts is the resolver for the getDrafts field.
+func (r *queryResolver) GetDrafts(ctx context.Context, userID string) ([]*model.Post, error) {
+	drafts, err := r.PostService.GetDrafts(ctx, userID)
+	if err != nil {
+		return nil, buildBadRequestError(ctx, err)
+	}
+
+	modelDrafts := make([]*model.Post, len(drafts))
+	for i, draft := range drafts {
+		modelDrafts[i] = convertToModelPost(draft)
+	}
+
+	return modelDrafts, nil
+}
+
+// GetPostAnalytics is the resolver for the getPostAnalytics field.
+func (r *queryResolver) GetPostAnalytics(ctx context.Context, postID string) (*model.PostAnalytics, error) {
+	analytics, err := r.PostService.GetPostAnalytics(ctx, postID)
+	if err != nil {
+		return nil, buildBadRequestError(ctx, err)
+	}
+	postanalytics := &model.PostAnalytics{
+		Views:         analytics.Views,
+		Reach:         analytics.Reach,
+		CommentsCount: analytics.CommentsCount,
+		Shares:        analytics.Shares,
+	}
+	return postanalytics, nil
+}
+
+// GetUserPostStats is the resolver for the getUserPostStats field.
+func (r *queryResolver) GetUserPostStats(ctx context.Context, userID string) (*model.UserPostStats, error) {
+	stats, err := r.PostService.GetUserPostStats(ctx, userID)
+	if err != nil {
+		return nil, buildBadRequestError(ctx, err)
+	}
+
+	postanalytics := &model.UserPostStats{
+		TotalPosts:   stats.TotalPosts,
+		TotalLikes:   stats.TotalLikes,
+		TotalReposts: stats.TotalReposts,
+	}
+	return postanalytics, nil
+}
 
 // Query returns graph.QueryResolver implementation.
 func (r *Resolver) Query() graph.QueryResolver { return &queryResolver{r} }
 
-type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }

@@ -3,15 +3,16 @@ mock:
 
 migrate:
 	migrate -source file://internal/migrations \
-			_database postgres://postgres:bert@127.0.0.1:5432/graphql_chat?sslmode=disable up
+			-database postgres://postgres:bert@127.0.0.1:5432/graphql_chat?sslmode=disable up
 
 rollback:
 	migrate -source file://internal/migrations \
-            			_database postgres://postgres:bert@127.0.0.1:5432/graphql_chat?sslmode=disable down
+            			 -database postgres://postgres:bert@127.0.0.1:5432/graphql_chat?sslmode=disable down 1
+
 
 drop:
 	migrate -source file://internal/migrations \
-            			_database postgres://postgres:bert@127.0.0.1:5432/graphql_chat?sslmode=disable drop
+            			-database postgres://postgres:bert@127.0.0.1:5432/graphql_chat?sslmode=disable drop
 
 #migration:
 #	@if [ -z "$(name)" ]; then \

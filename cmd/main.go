@@ -29,7 +29,7 @@ func main() {
 		log.Fatalf("unable to create new app: %v", err)
 	}
 
-	// err = app.DB.Migrate()
+	// err = app.Repo.Migrate()
 	// if err != nil {
 	//	log.Fatalf("unable to run database migration: %v", err)
 	//}

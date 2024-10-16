@@ -73,7 +73,7 @@ package domain
 //}
 //
 //// Utility function to initialize database
-//func initializeDatabase(dbURL string) (*sql.DB, error) {
+//func initializeDatabase(dbURL string) (*sql.Repo, error) {
 //	// Initialize and return database connection
 //}
 //

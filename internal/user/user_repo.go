@@ -3,18 +3,18 @@ package user
 import (
 	"context"
 	"github.com/bertoxic/graphqlChat/internal/app"
-	"github.com/bertoxic/graphqlChat/internal/drivers"
+	"github.com/bertoxic/graphqlChat/internal/database"
 )
 
 type UserRepo interface {
 }
 
 type Repository struct {
-	DB  drivers.Database
+	DB  database.DatabaseRepo
 	app *app.App
 }
 
-func NewUserRepo(db drivers.Database, a *app.App) *Repository {
+func NewUserRepo(db database.DatabaseRepo, a *app.App) *Repository {
 	return &Repository{
 		DB:  db,
 		app: a,

@@ -65,7 +65,7 @@ func (db *PostgresDB) GetPoolConn() *pgxpool.Pool {
 //		if err != nil {
 //			return nil, fmt.Errorf("failed to connect to mysql: %w", err)
 //		}
-//		// return &SqlDB{DB: db}, nil
+//		// return &SqlDB{Repo: db}, nil
 //		return nil, nil
 //
 //	default:
@@ -93,8 +93,13 @@ func (db *PostgresDB) Migrate() error {
 		return fmt.Errorf("failed to initialize migrations: %w", err)
 	}
 
-	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		return fmt.Errorf("error migrate up: %v", err)
+	if err := m.Up(); err != nil {
+		if errors.Is(err, migrate.ErrNoChange) {
+			log.Println("No new migrations")
+		} else {
+			log.Printf("Migration failed: %v\n", err)
+			return fmt.Errorf("error migrating: %w", err)
+		}
 	}
 
 	//log.Println("migration done")

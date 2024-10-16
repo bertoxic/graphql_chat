@@ -3,7 +3,9 @@ package resolvers
 import (
 	"context"
 	"github.com/99designs/gqlgen/graphql"
+	"github.com/bertoxic/graphqlChat/graph/model"
 	"github.com/bertoxic/graphqlChat/internal/auth"
+	"github.com/bertoxic/graphqlChat/internal/posts"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 	"net/http"
 )
@@ -17,12 +19,14 @@ import (
 type Resolver struct {
 	AuthService auth.AuthService
 	UserService auth.UserRepository
+	PostService posts.PostService
 }
 
-func NewResolver(authService auth.AuthService, userService auth.UserRepository) *Resolver {
+func NewResolver(authService auth.AuthService, userService auth.UserRepository, postService posts.PostService) *Resolver {
 	return &Resolver{
 		AuthService: authService,
 		UserService: userService,
+		PostService: postService,
 	}
 }
 
@@ -35,5 +39,31 @@ func buildBadRequestError(ctx context.Context, err error) error {
 		Extensions: map[string]interface{}{
 			"code": http.StatusBadRequest,
 		},
+	}
+}
+
+func convertToModelPost(post *posts.Post) *model.Post {
+	if post == nil {
+		return nil
+	}
+
+	childrenPosts := make([]*model.Post, len(post.Children))
+	for i, child := range post.Children {
+		childrenPosts[i] = convertToModelPost(child)
+	}
+
+	return &model.Post{
+		ID:        post.ID,
+		UserID:    post.UserID,
+		Title:     post.Title,
+		Content:   post.Content,
+		ImageURL:  post.ImageURL,
+		AudioURL:  post.AudioURL,
+		ParentID:  post.ParentID,
+		CreatedAt: post.CreatedAt,
+		UpdatedAt: post.UpdatedAt,
+		Likes:     post.Likes,
+		Reposts:   post.Reposts,
+		Children:  childrenPosts,
 	}
 }
