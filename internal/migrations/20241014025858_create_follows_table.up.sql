@@ -5,3 +5,4 @@ CREATE TABLE IF NOT EXISTS follows (
                                        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
                                        PRIMARY KEY (follower_id, followed_id)
 );
+

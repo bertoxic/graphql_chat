@@ -34,9 +34,10 @@ func Routes(app *app.App) http.Handler {
 		graph.NewExecutableSchema(
 			graph.Config{
 				Resolvers: &resolvers.Resolver{
-					AuthService: app.Services.AuthService,
-					UserService: app.Services.UserAuthService,
-					PostService: postService,
+					AuthService:     app.Services.AuthService,
+					AuthUserService: app.Services.UserAuthService,
+					PostService:     postService,
+					UserService:     *app.Services.UserService,
 				},
 			},
 		),

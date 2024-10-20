@@ -10,6 +10,7 @@ import (
 	"github.com/bertoxic/graphqlChat/internal/handlers"
 	"github.com/bertoxic/graphqlChat/internal/jwt"
 	"github.com/bertoxic/graphqlChat/internal/render"
+	"github.com/bertoxic/graphqlChat/internal/user"
 	"github.com/bertoxic/graphqlChat/pkg/config"
 	"log"
 	"os"
@@ -29,6 +30,7 @@ type App struct {
 type ServicesContainer struct {
 	AuthService     auth.AuthService
 	UserAuthService auth.UserRepository
+	UserService     *user.Service
 }
 
 //
@@ -78,10 +80,13 @@ func (a *App) initialize() error {
 
 func (a *App) initializeServices() error {
 	//initialize all my Services here
-	userRepo := auth.NewUserRepo(a.DB)
+	authUserRepo := auth.NewUserRepo(a.DB)
 	tokenService := jwt.NewTokenService(a.Config)
-	a.Services.AuthService = auth.NewAuthService(userRepo, tokenService)
+	a.Services.AuthService = auth.NewAuthService(authUserRepo, tokenService)
 	a.Services.UserAuthService = auth.NewUserRepo(a.DB)
+	userRepo := user.NewUserRepo(a.DB)
+	userService := user.NewService(userRepo)
+	a.Services.UserService = userService
 	return nil
 }
 

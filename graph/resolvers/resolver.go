@@ -6,6 +6,7 @@ import (
 	"github.com/bertoxic/graphqlChat/graph/model"
 	"github.com/bertoxic/graphqlChat/internal/auth"
 	"github.com/bertoxic/graphqlChat/internal/posts"
+	"github.com/bertoxic/graphqlChat/internal/user"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 	"net/http"
 )
@@ -17,16 +18,17 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	AuthService auth.AuthService
-	UserService auth.UserRepository
-	PostService posts.PostService
+	AuthService     auth.AuthService
+	AuthUserService auth.UserRepository
+	PostService     posts.PostService
+	UserService     user.Service
 }
 
 func NewResolver(authService auth.AuthService, userService auth.UserRepository, postService posts.PostService) *Resolver {
 	return &Resolver{
-		AuthService: authService,
-		UserService: userService,
-		PostService: postService,
+		AuthService:     authService,
+		AuthUserService: userService,
+		PostService:     postService,
 	}
 }
 
@@ -42,6 +44,11 @@ func buildBadRequestError(ctx context.Context, err error) error {
 	}
 }
 
+// Helper function to get current user ID from context
+func getCurrentUserID(ctx context.Context) string {
+	// This is just a placeholder
+	return ctx.Value("currentUserID").(string)
+}
 func convertToModelPost(post *posts.Post) *model.Post {
 	if post == nil {
 		return nil

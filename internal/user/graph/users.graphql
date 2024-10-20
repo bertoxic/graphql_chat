@@ -1,0 +1,122 @@
+#type User {
+#    id: ID!
+#    username: String!
+#    email: String!
+#    fullName: String
+#    bio: String
+#    dateOfBirth: String
+#    profilePictureUrl: String
+#    coverPictureUrl: String
+#    location: String
+#    website: String
+#    isPrivate: Boolean!
+#    createdAt: Time!
+#    updatedAt: Time!
+#    followers: [User!]
+#    following: [User!]
+#    posts: [Post!]
+#    bookmarkedPosts: [Post!]
+#}
+
+type UserResponse {
+    success: Boolean!
+    message: String
+    data: UserResponseData
+}
+
+type UserResponseData {
+    user: User
+    userDetails: UserDetails
+}
+
+type UserDetails {
+    id: ID!
+    username: String!
+    email: String!
+    fullName: String
+    bio: String
+    dateOfBirth: String
+    profilePictureUrl: String
+    coverPictureUrl: String
+    location: String
+    website: String
+    isPrivate: Boolean!
+    updatedAt: Time!
+}
+
+# Existing authentication types
+
+
+# New types for enhanced functionality
+type UserStats {
+    totalPosts: Int!
+    totalFollowers: Int!
+    totalFollowing: Int!
+}
+
+
+
+type SearchResult {
+    users: [User!]!
+    posts: [Post!]!
+    tags: [String!]!
+}
+
+input UpdateUserInput {
+    fullName: String
+    userName: String
+    bio: String
+    email:String
+    dateOfBirth: String
+    profilePictureUrl: String
+    coverPictureUrl: String
+    location: String
+    website: String
+    isPrivate: Boolean
+    updated_at: Time
+}
+
+# Extended Query type
+extend type Query {
+    getUser(id: ID!): User
+    getUserByUsername(username: String!): User
+    getCurrentUser: User
+    getUserFollowers(userId: ID!, limit: Int, offset: Int): [User!]!
+    getUserFollowing(userId: ID!, limit: Int, offset: Int): [User!]!
+    searchUsers(query: String!, limit: Int): [User!]!
+    getUserDetails(userId: ID!): UserDetails
+    getUserStats(userId: ID!): UserStats!
+    searchAll(query: String!, limit: Int): SearchResult!
+    getSuggestedUsers(limit: Int): [User!]!
+    getUserLikedPosts(userId: ID!, limit: Int, offset: Int): [Post!]!
+    checkUsernameAvailability(username: String!): Boolean!
+}
+
+# Extended Mutation type
+extend type Mutation {
+    # User-related mutations
+    updateUser(input: UpdateUserInput!,userId:ID!): User!
+    followUser(userId: ID!): UserResponse!
+    unfollowUser(userId: ID!): UserResponse!
+    blockUser(userId: ID!): UserResponse!
+    unblockUser(userId: ID!): UserResponse!
+    muteUser(userId: ID!): UserResponse!
+    unmuteUser(userId: ID!): UserResponse!
+
+    # Account management
+    changePassword(currentPassword: String!, newPassword: String!): Boolean!
+    requestPasswordReset(email: String!): Boolean!
+    resetPassword(userId:ID!,token: String!, newPassword: String!): Boolean!
+    deleteAccount(password: String!): Boolean!
+
+    # User interactions
+    reportUser(userId: ID!, reason: String!): Boolean!
+
+    # Profile customization
+    updateProfileColors(primaryColor: String!, secondaryColor: String!): UserResponse!
+}
+
+# Subscription type for real-time updates
+type Subscription {
+    userStatusChanged(userId: ID!): User!
+}

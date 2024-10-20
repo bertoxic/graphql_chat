@@ -55,14 +55,14 @@ func (pr *PostRepo) createPostTx(ctx context.Context, tx pgx.Tx, input CreatePos
 	}
 
 	query := `
-    INSERT INTO posts (user_id, title, content, image_url, audio_url, parent_id, created_at, updated_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    INSERT INTO posts (user_id, title, content, image_url, audio_url, parent_id, is_edited, created_at, updated_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8,$9)
     RETURNING id, user_id, title, content, image_url, audio_url, parent_id, created_at, updated_at, likes, reposts
 `
 	var post Post
 	err := tx.QueryRow(ctx, query,
 		userID, input.Title, input.Content, input.ImageURL, input.AudioURL, parentIDValue,
-		time.Now(), time.Now(),
+		false, time.Now(), time.Now(),
 	).Scan(
 		&post.ID, &post.UserID, &post.Title, &post.Content, &post.ImageURL, &post.AudioURL,
 		&post.ParentID, &post.CreatedAt, &post.UpdatedAt, &post.Likes, &post.Reposts,
@@ -625,7 +625,6 @@ func (pr *PostRepo) getPostTx(ctx context.Context, tx pgx.Tx, postID string) (*P
 		FROM posts
 		WHERE id = $1
 	`
-
 	var post Post
 	err := tx.QueryRow(ctx, query, postID).Scan(
 		&post.ID, &post.UserID, &post.Title, &post.Content, &post.ImageURL, &post.AudioURL,

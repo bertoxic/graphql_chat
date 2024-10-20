@@ -147,12 +147,31 @@ func (r *mutationResolver) TagUserInPost(ctx context.Context, postID string, tag
 
 // BookmarkPost is the resolver for the bookmarkPost field.
 func (r *mutationResolver) BookmarkPost(ctx context.Context, postID string, userID string) (*model.PostResponse, error) {
-	panic(fmt.Errorf("not implemented: BookmarkPost - bookmarkPost"))
+	// Assuming PostService has a method `BookmarkPost` that returns a boolean indicating success and an error
+	postresp, err := r.PostService.BookmarkPost(ctx, postID, userID)
+	response := &model.PostResponse{
+		Success: postresp.Success,
+		Message: &postresp.Message,
+	}
+	if err != nil {
+		return response, buildBadRequestError(ctx, err)
+	}
+
+	return response, nil
 }
 
 // RemoveBookmark is the resolver for the removeBookmark field.
 func (r *mutationResolver) RemoveBookmark(ctx context.Context, postID string, userID string) (*model.PostResponse, error) {
-	panic(fmt.Errorf("not implemented: RemoveBookmark - removeBookmark"))
+	postresp, err := r.PostService.RemoveBookmark(ctx, postID, userID)
+	response := &model.PostResponse{
+		Success: postresp.Success,
+		Message: &postresp.Message,
+	}
+	if err != nil {
+		return response, buildBadRequestError(ctx, err)
+	}
+
+	return response, nil
 }
 
 // GetUserByEmail is the resolver for the getUserByEmail field.
@@ -162,11 +181,11 @@ func (r *queryResolver) GetUserByEmail(ctx context.Context, email string) (*mode
 		return nil, buildBadRequestError(ctx, err)
 	}
 
-	if r.UserService == nil {
-		return nil, fmt.Errorf("UserService is not initialized")
+	if r.AuthUserService == nil {
+		return nil, fmt.Errorf("AuthUserService is not initialized")
 	}
 
-	user, err := r.UserService.GetUserByEmail(ctx, email)
+	user, err := r.AuthUserService.GetUserByEmail(ctx, email)
 	if err != nil {
 		return nil, buildBadRequestError(ctx, err)
 	}

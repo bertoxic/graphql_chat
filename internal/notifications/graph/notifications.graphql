@@ -1,0 +1,35 @@
+type Notification {
+    id: ID!
+    userId: ID!
+    type: NotificationType!
+    title: String!
+    content: String!
+    isRead: Boolean!
+    createdAt: Time!
+}
+
+enum NotificationType {
+    LIKE
+    COMMENT
+    FOLLOW
+    MENTION
+    RETWEET
+}
+
+# Extended Query type
+extend type Query {
+    getUserNotifications(limit: Int, offset: Int): [Notification!]!
+    getUnreadNotificationsCount: Int!
+
+}
+
+extend type Mutation {
+    markNotificationAsRead(notificationId: ID!): Boolean!
+    markAllNotificationsAsRead: Boolean!
+
+}
+
+# Subscription type for real-time updates
+extend type Subscription {
+    newNotification: Notification!
+}

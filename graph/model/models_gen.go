@@ -3,6 +3,9 @@
 package model
 
 import (
+	"fmt"
+	"io"
+	"strconv"
 	"time"
 )
 
@@ -24,6 +27,16 @@ type LoginInput struct {
 }
 
 type Mutation struct {
+}
+
+type Notification struct {
+	ID        string           `json:"id"`
+	UserID    string           `json:"userId"`
+	Type      NotificationType `json:"type"`
+	Title     string           `json:"title"`
+	Content   string           `json:"content"`
+	IsRead    bool             `json:"isRead"`
+	CreatedAt time.Time        `json:"createdAt"`
 }
 
 type Post struct {
@@ -67,15 +80,130 @@ type RegisterInput struct {
 	Email    string `json:"email"`
 }
 
+type SearchResult struct {
+	Users []*User  `json:"users"`
+	Posts []*Post  `json:"posts"`
+	Tags  []string `json:"tags"`
+}
+
+type Subscription struct {
+}
+
+type UpdateUserInput struct {
+	FullName          *string    `json:"fullName,omitempty"`
+	UserName          *string    `json:"userName,omitempty"`
+	Bio               *string    `json:"bio,omitempty"`
+	Email             *string    `json:"email,omitempty"`
+	DateOfBirth       *string    `json:"dateOfBirth,omitempty"`
+	ProfilePictureURL *string    `json:"profilePictureUrl,omitempty"`
+	CoverPictureURL   *string    `json:"coverPictureUrl,omitempty"`
+	Location          *string    `json:"location,omitempty"`
+	Website           *string    `json:"website,omitempty"`
+	IsPrivate         *bool      `json:"isPrivate,omitempty"`
+	UpdatedAt         *time.Time `json:"updated_at,omitempty"`
+}
+
 type User struct {
-	ID        string    `json:"id"`
-	Username  string    `json:"username"`
-	Email     string    `json:"email"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID                string    `json:"id"`
+	Username          string    `json:"username"`
+	Email             string    `json:"email"`
+	FullName          *string   `json:"fullName,omitempty"`
+	Bio               *string   `json:"bio,omitempty"`
+	DateOfBirth       *string   `json:"dateOfBirth,omitempty"`
+	ProfilePictureURL *string   `json:"profilePictureUrl,omitempty"`
+	CoverPictureURL   *string   `json:"coverPictureUrl,omitempty"`
+	Location          *string   `json:"location,omitempty"`
+	Website           *string   `json:"website,omitempty"`
+	IsPrivate         bool      `json:"isPrivate"`
+	CreatedAt         time.Time `json:"createdAt"`
+	UpdatedAt         time.Time `json:"updatedAt"`
+	Followers         []*User   `json:"followers,omitempty"`
+	Following         []*User   `json:"following,omitempty"`
+	Posts             []*Post   `json:"posts,omitempty"`
+	BookmarkedPosts   []*Post   `json:"bookmarkedPosts,omitempty"`
+}
+
+type UserDetails struct {
+	ID                string    `json:"id"`
+	Username          string    `json:"username"`
+	Email             string    `json:"email"`
+	FullName          *string   `json:"fullName,omitempty"`
+	Bio               *string   `json:"bio,omitempty"`
+	DateOfBirth       *string   `json:"dateOfBirth,omitempty"`
+	ProfilePictureURL *string   `json:"profilePictureUrl,omitempty"`
+	CoverPictureURL   *string   `json:"coverPictureUrl,omitempty"`
+	Location          *string   `json:"location,omitempty"`
+	Website           *string   `json:"website,omitempty"`
+	IsPrivate         bool      `json:"isPrivate"`
+	UpdatedAt         time.Time `json:"updatedAt"`
 }
 
 type UserPostStats struct {
 	TotalPosts   int `json:"totalPosts"`
 	TotalLikes   int `json:"totalLikes"`
 	TotalReposts int `json:"totalReposts"`
+}
+
+type UserResponse struct {
+	Success bool              `json:"success"`
+	Message *string           `json:"message,omitempty"`
+	Data    *UserResponseData `json:"data,omitempty"`
+}
+
+type UserResponseData struct {
+	User        *User        `json:"user,omitempty"`
+	UserDetails *UserDetails `json:"userDetails,omitempty"`
+}
+
+type UserStats struct {
+	TotalPosts     int `json:"totalPosts"`
+	TotalFollowers int `json:"totalFollowers"`
+	TotalFollowing int `json:"totalFollowing"`
+}
+
+type NotificationType string
+
+const (
+	NotificationTypeLike    NotificationType = "LIKE"
+	NotificationTypeComment NotificationType = "COMMENT"
+	NotificationTypeFollow  NotificationType = "FOLLOW"
+	NotificationTypeMention NotificationType = "MENTION"
+	NotificationTypeRetweet NotificationType = "RETWEET"
+)
+
+var AllNotificationType = []NotificationType{
+	NotificationTypeLike,
+	NotificationTypeComment,
+	NotificationTypeFollow,
+	NotificationTypeMention,
+	NotificationTypeRetweet,
+}
+
+func (e NotificationType) IsValid() bool {
+	switch e {
+	case NotificationTypeLike, NotificationTypeComment, NotificationTypeFollow, NotificationTypeMention, NotificationTypeRetweet:
+		return true
+	}
+	return false
+}
+
+func (e NotificationType) String() string {
+	return string(e)
+}
+
+func (e *NotificationType) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = NotificationType(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid NotificationType", str)
+	}
+	return nil
+}
+
+func (e NotificationType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
 }
