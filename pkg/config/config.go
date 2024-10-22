@@ -26,6 +26,20 @@ type JWT struct {
 }
 
 func NewConfig(fileName, port string) (*AppConfig, error) {
+	// Check if the environment variables are already set, to skip .env file loading
+	if os.Getenv("DATABASE_URL") != "" {
+		fmt.Println("Environment variables already set, skipping .env file loading")
+
+		return &AppConfig{
+			DataBaseINFO: &database{URL: os.Getenv("DATABASE_URL")},
+			JWT: JWT{
+				Secret: []byte(os.Getenv("JWT_SECRET")),
+				Issuer: os.Getenv("ISSUER"),
+			},
+			Port: port,
+		}, nil
+	}
+
 	exePath, err := getExecutablePath()
 	if err != nil {
 		log.Printf("Warning: Unable to get executable path: %v", err)
@@ -40,7 +54,6 @@ func NewConfig(fileName, port string) (*AppConfig, error) {
 
 	// Trying to load .env from multiple possible locations
 	envPaths := []string{
-		//filepath.Join(exePath, ".env"),
 		filepath.Join(exePath, fmt.Sprintf("%s", fileName)),
 		filepath.Join(exePath, fmt.Sprintf("../%s", fileName)),
 		filepath.Join(srcPath, fmt.Sprintf("%s", fileName)),
@@ -48,10 +61,6 @@ func NewConfig(fileName, port string) (*AppConfig, error) {
 		filepath.Join(srcPath, fmt.Sprintf("../../%s", fileName)),
 		filepath.Join(exePath, fmt.Sprintf("../../%s", fileName)),
 		fmt.Sprintf("%s", fileName),
-		//filepath.Join(exePath, "../.env"),
-		//filepath.Join(srcPath, ".env"),
-		//filepath.Join(srcPath, "../.env"),
-		//filepath.Join(srcPath, "../../.env"),
 		fileName, // Trying current working directory as well
 	}
 
@@ -59,6 +68,7 @@ func NewConfig(fileName, port string) (*AppConfig, error) {
 	for _, path := range envPaths {
 		absPath, _ := filepath.Abs(path)
 		err = godotenv.Load(absPath)
+
 		if err == nil {
 			fmt.Printf("Successfully loaded .env from: %s\n", absPath)
 			envLoaded = true
