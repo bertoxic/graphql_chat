@@ -12,9 +12,11 @@ require (
 	github.com/lestrrat-go/jwx v1.2.30
 	github.com/stretchr/testify v1.9.0
 	github.com/vektah/gqlparser/v2 v2.5.17
+	golang.org/x/oauth2 v0.23.0
 )
 
 require (
+	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect

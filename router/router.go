@@ -29,6 +29,8 @@ func Routes(app *app.App) http.Handler {
 	mux.Use(middlewares.AuthMiddleWare(tokenService))
 	mux.Use(middleware.Timeout(time.Second * 45))
 	mux.Get("/", handlers.Repo.HomePage)
+	mux.Get("/googleLogin", handlers.Repo.HandleGoogleLogin)
+	mux.Get("/googleCallback", handlers.Repo.HandleGoogleCallback)
 	mux.Handle("/play", playground.Handler("Graphql-chat", "/query"))
 	mux.Handle("/query", handler.NewDefaultServer(
 		graph.NewExecutableSchema(
