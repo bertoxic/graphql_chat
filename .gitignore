@@ -1,1 +1,3 @@
+#remove from
 .env
+.env.test
