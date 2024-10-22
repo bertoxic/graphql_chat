@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"github.com/bertoxic/graphqlChat/internal/models"
 	"github.com/bertoxic/graphqlChat/internal/utils"
 	"github.com/bertoxic/graphqlChat/test"
 	"github.com/stretchr/testify/mock"
@@ -40,8 +41,8 @@ func TestAuthService_Register(t *testing.T) {
 				m.On("GetUserByEmail",
 					mock.Anything,
 					"test@example.com",
-				).Return(UserDetails{ID: "123"}, nil)
-				m.On("CreateUser", mock.Anything, mock.AnythingOfType("RegistrationInput")).Return(UserDetails{ID: "1234"}, nil)
+				).Return(models.UserDetails{ID: "123"}, nil)
+				m.On("CreateUser", mock.Anything, mock.AnythingOfType("RegistrationInput")).Return(models.UserDetails{ID: "1234"}, nil)
 			},
 			wantErr:        false,
 			expectedCalled: true,
@@ -74,7 +75,7 @@ func TestAuthService_Register(t *testing.T) {
 			setupMock: func(m *MockUserRepository) {
 				m.On("GetUserByEmail", mock.Anything,
 					"example@gmail.com").Return(
-					UserDetails{}, errors.New("user already exist"))
+					models.UserDetails{}, errors.New("user already exist"))
 			},
 			wantErr:        true,
 			errType:        utils.ErrUserExist,
@@ -265,8 +266,8 @@ func TestAuthService_Register2(t *testing.T) {
 	t.Run("can register", func(t *testing.T) {
 		userRepo := new(MockUserRepository)
 		service := NewAuthService(userRepo)
-		userRepo.On("GetUserByEmail", mock.Anything, mock.Anything, mock.Anything).Return(UserDetails{}, nil)
-		userRepo.On("CreateUser", mock.Anything, mock.AnythingOfType("RegistrationInput")).Return(UserDetails{
+		userRepo.On("GetUserByEmail", mock.Anything, mock.Anything, mock.Anything).Return(models.UserDetails{}, nil)
+		userRepo.On("CreateUser", mock.Anything, mock.AnythingOfType("RegistrationInput")).Return(models.UserDetails{
 			ID:       "1234",
 			UserName: "name",
 			Email:    "some@fm.com",
@@ -283,7 +284,7 @@ func TestAuthService_Register2(t *testing.T) {
 	t.Run("can register", func(t *testing.T) {
 		userRepo := new(MockUserRepository)
 		service := NewAuthService(userRepo)
-		userRepo.On("GetUserByEmail", mock.Anything, mock.Anything, mock.Anything).Return(UserDetails{}, utils.ErrUserExist)
+		userRepo.On("GetUserByEmail", mock.Anything, mock.Anything, mock.Anything).Return(models.UserDetails{}, utils.ErrUserExist)
 		_, err := service.Register(ctx, validInput)
 		require.Error(t, err)
 		require.ErrorIs(t, err, utils.ErrUserExist)
@@ -315,7 +316,7 @@ func TestAuthService_Login(t *testing.T) {
 			},
 			wantErr: false,
 			setupMock: func(m *MockUserRepository) {
-				m.On("GetUserByEmail", mock.Anything, "validmail@gmail.com").Return(UserDetails{Password: test.FakePassWord}, nil)
+				m.On("GetUserByEmail", mock.Anything, "validmail@gmail.com").Return(models.UserDetails{Password: test.FakePassWord}, nil)
 			},
 			expectedCalls: map[string][]interface{}{
 				"GetUserByEmail": {mock.Anything, "validmail@gmail.com"},
@@ -329,7 +330,7 @@ func TestAuthService_Login(t *testing.T) {
 			},
 			wantErr: true,
 			setupMock: func(m *MockUserRepository) {
-				m.On("GetUserByEmail", mock.Anything, "validmail@gmail.com").Return(UserDetails{}, utils.ErrUserNotFound)
+				m.On("GetUserByEmail", mock.Anything, "validmail@gmail.com").Return(models.UserDetails{}, utils.ErrUserNotFound)
 			},
 			expectedCalls: map[string][]interface{}{
 				"GetUserByEmail": {mock.Anything, "validmail@gmail.com"},
@@ -344,7 +345,7 @@ func TestAuthService_Login(t *testing.T) {
 			},
 			wantErr: true,
 			setupMock: func(m *MockUserRepository) {
-				m.On("GetUserByEmail", mock.Anything, "validmail@gmail.com").Return(UserDetails{Password: test.FakePassWord}, nil)
+				m.On("GetUserByEmail", mock.Anything, "validmail@gmail.com").Return(models.UserDetails{Password: test.FakePassWord}, nil)
 			},
 			expectedCalls: map[string][]interface{}{
 				"GetUserByEmail": {mock.Anything, "validmail@gmail.com"},

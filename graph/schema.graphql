@@ -1,0 +1,27 @@
+scalar Time
+
+type User {
+    id: ID!
+    username: String!
+    email: String!
+    fullName: String
+    bio: String
+    dateOfBirth: String
+    profilePictureUrl: String
+    coverPictureUrl: String
+    location: String
+    website: String
+    isPrivate: Boolean!
+    createdAt: Time!
+    updatedAt: Time!
+    followers: [User!]
+    following: [User!]
+    posts: [Post!]
+    bookmarkedPosts: [Post!]
+}
+
+
+type Query {
+    getUserByEmail(email: String!): User
+}
+

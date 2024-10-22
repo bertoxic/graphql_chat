@@ -1,7 +1,7 @@
 package test
 
 import (
-	"github.com/bertoxic/graphqlChat/internal/config"
+	"github.com/bertoxic/graphqlChat/pkg/config"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"os"

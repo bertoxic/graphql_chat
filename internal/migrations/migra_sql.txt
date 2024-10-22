@@ -1,0 +1,48 @@
+-- Enable UUID extension if not already enabled
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Create posts table
+CREATE TABLE IF NOT EXISTS posts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    title VARCHAR(255),
+    content TEXT,
+    image_url TEXT,
+    audio_url TEXT,
+    parent_id UUID REFERENCES posts(id),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    likes INT NOT NULL DEFAULT 0,
+    reposts INT NOT NULL DEFAULT 0
+);
+
+-- Create post_likes table
+CREATE TABLE IF NOT EXISTS post_likes (
+    post_id UUID NOT NULL REFERENCES posts(id),
+    user_id UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (post_id, user_id)
+);
+
+-- Create follows table
+CREATE TABLE IF NOT EXISTS follows (
+    follower_id UUID NOT NULL REFERENCES users(id),
+    followed_id UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (follower_id, followed_id)
+);
+
+-- Create post_tags table
+CREATE TABLE IF NOT EXISTS post_tags (
+    post_id UUID NOT NULL REFERENCES posts(id),
+    user_id UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (post_id, user_id)
+);
+
+-- Add indexes for better query performance
+CREATE INDEX idx_posts_user_id ON posts(user_id);
+CREATE INDEX idx_posts_parent_id ON posts(parent_id);
+CREATE INDEX idx_posts_created_at ON posts(created_at);
+CREATE INDEX idx_follows_follower_id ON follows(follower_id);
+CREATE INDEX idx_follows_followed_id ON follows(followed_id);

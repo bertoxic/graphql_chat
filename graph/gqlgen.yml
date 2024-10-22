@@ -1,0 +1,58 @@
+#skip_validation: true
+#
+#
+#schema:
+#  .**/*.graphql
+#
+#resolver:
+#  layout: follow-schema
+#  dir: ./resolvers
+#
+## Where should any generated models go?
+#model:
+#  filename: ./model/models_gen.go
+#  package: model
+
+
+
+# gqlgen.yml
+# Schema files for GraphQL APIs
+schema:
+  ../**/*.graphql
+  #- ../graph/schema.graphql            # Main schema for the app
+  #- ../internal/posts/graph/*.graphql  # Schema related to posts
+
+# Where to write the generated server code
+       # Adjust the package path as per your go module name
+
+# Where to write the generated models
+model:
+  filename: ./model/models_gen.go
+  package: model  # Adjust to your actual module
+
+# Resolver settings
+resolver:
+  layout: follow-schema              # Keep resolvers next to the schema files
+  dir: ./resolvers               # Main resolvers directory
+  package:  resolvers
+  filename_template:  "{name}.resolvers.go"
+
+# Model directory configuration, allowing customization of model mapping per domain
+
+#autobind:
+#  - "github.com/bertoxic/graphqlChat/graph/model"
+#  - "github.com/bertoxic/graphqlChat/internal/posts/graph/model"
+
+# Optional additional settings for templates or extensions
+models:
+  ID:
+    model:
+      - github.com/99designs/gqlgen/graphql.ID
+      - github.com/99designs/gqlgen/graphql.Int
+      - github.com/99designs/gqlgen/graphql.Int64
+      - github.com/99designs/gqlgen/graphql.Int32
+  Int:
+    model:
+      - github.com/99designs/gqlgen/graphql.Int
+      - github.com/99designs/gqlgen/graphql.Int64
+      - github.com/99designs/gqlgen/graphql.Int32

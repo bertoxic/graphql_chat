@@ -1,0 +1,122 @@
+#extend type Query {
+#    getPost(postID: ID!): Post
+#    allUserPosts(userID: ID!): [Post!]!
+#    getPostComments(postID: ID!): [Post!]!
+#    getFeed(userID: ID!): [Post!]!
+#}
+#
+#extend type Mutation {
+#    createPost(input: CreatePostInput!, userID: ID!, parentID: ID): Post
+#    updatePost(postID: ID!, input: CreatePostInput!): Post
+#    deletePost(postID: ID!): Boolean!
+#    repost(postID: ID!, userID: ID!): Post
+#    addComment(postID: ID!, input: CreatePostInput!, userID: ID!): Post
+#    likePost(postID: ID!, userID: ID!): Boolean!
+#    unlikePost(postID: ID!, userID: ID!): Boolean!
+#    tagUserInPost(postID: ID!, taggedUserID: ID!): Boolean!
+#}
+#
+#type Post {
+#    id: ID!
+#    userID: ID!
+#    title: String
+#    content: String!
+#    imageURL: String
+#    audioURL: String
+#    parentID: ID
+#    createdAt: Time!
+#    updatedAt: Time!
+#    likes: Int!
+#    reposts: Int!
+#    children: [Post!]!
+#}
+#
+##type User {
+##    id: String!
+##    username: String!
+##    email: String!
+##    createdAt: Time!
+##}
+#
+#input CreatePostInput {
+#    title: String
+#    content: String!
+#    imageURL: String
+#    audioURL: String
+#}
+
+#scalar Time
+
+type Post {
+    id: ID!
+    userId: ID!
+    title: String
+    content: String!
+    imageUrl: String
+    videoUrl: String
+    audioUrl: String
+    isEdited: Boolean
+    isDraft: Boolean
+    parentId: ID
+    createdAt: Time!
+    updatedAt: Time!
+    likes: Int!
+    reposts: Int!
+    tags: [String!]!
+    children: [Post!]
+    analytics: PostAnalytics
+}
+
+type PostAnalytics {
+    views: Int!
+    reach: Int!
+    commentsCount: Int!
+    shares: Int!
+}
+
+type UserPostStats {
+    totalPosts: Int!
+    totalLikes: Int!
+    totalReposts: Int!
+}
+
+type PostResponse {
+    success: Boolean!
+    message: String
+}
+
+input CreatePostInput {
+    title: String
+    content: String!
+    imageUrl: String
+    audioUrl: String
+}
+
+extend type Query {
+    getPost(postId: ID!): Post
+    getAllUserPosts(userId: ID!): [Post!]!
+    getPostComments(postId: ID!): [Post!]!
+    getUserFeed(userId: ID!): [Post!]!
+    getUsersWhoLikedPost(postId: ID!): [ID!]!
+    searchPosts(query: String!): [Post!]!
+    getTrendingPosts(limit: Int!): [Post!]!
+    getPostsByTag(tag: String!): [Post!]!
+    getUserBookmarkedPosts(userId: ID!): [Post!]!
+    getDrafts(userId: ID!): [Post!]!
+    getPostAnalytics(postId: ID!): PostAnalytics
+    getUserPostStats(userId: ID!): UserPostStats
+}
+
+extend type Mutation {
+    createPost(input: CreatePostInput!, userId: ID!, parentId: ID): Post
+    updatePost(postId: ID!, input: CreatePostInput!): Post
+    deletePost(postId: ID!): PostResponse
+    repost(postId: ID!, userId: ID!): Post
+    addComment(postId: ID!, input: CreatePostInput!, userId: ID!): Post
+    likePost(postId: ID!, userId: ID!): PostResponse
+    unlikePost(postId: ID!, userId: ID!): PostResponse
+    tagUserInPost(postId: ID!, taggedUserId: ID!): PostResponse
+    bookmarkPost(postId: ID!, userId: ID!): PostResponse
+    removeBookmark(postId: ID!, userId: ID!): PostResponse
+}
+

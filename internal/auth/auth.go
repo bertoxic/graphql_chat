@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/bertoxic/graphqlChat/internal/config"
-	"github.com/bertoxic/graphqlChat/internal/utils"
+	errorx "github.com/bertoxic/graphqlChat/internal/error"
+	"github.com/bertoxic/graphqlChat/internal/models"
+	"github.com/bertoxic/graphqlChat/pkg/config"
+	"net/http"
 	"net/mail"
 	"regexp"
 	"strings"
@@ -17,95 +19,110 @@ import (
 var passwordCost = config.PasswordCost
 
 type AuthService interface {
-	Register(ctx context.Context, input RegistrationInput) (*AuthResponse, error)
-	Login(ctx context.Context, input LoginInput) (*AuthResponse, error)
+	Register(ctx context.Context, input models.RegistrationInput) (*AuthResponse, error)
+	Login(ctx context.Context, input models.LoginInput) (*AuthResponse, error)
 }
 
 type authService struct {
-	// Add dependencies here, e.g., database, logger, etc.
 	userRepo UserRepository
+	Service  TokenService
+}
+type AuthToken struct {
+	TokenID string
+	Sub     string
 }
 
-func NewAuthService(userRepo UserRepository) AuthService {
+type TokenService interface {
+	ParseTokenFromRequest(ctx context.Context, r *http.Request) (AuthToken, error)
+	ParseToken(ctx context.Context, payload string) (AuthToken, error)
+	CreateAccessToken(ctx context.Context, user models.UserDetails) (string, error)
+	CreateRefreshToken(ctx context.Context, user models.UserDetails, tokenID string) (string, error)
+}
+
+func NewAuthService(userRepo UserRepository, service TokenService) AuthService {
 	return &authService{
 		userRepo: userRepo,
-		// Initialize dependencies
+		Service:  service,
 	}
 }
 
-func (s *authService) Register(ctx context.Context, input RegistrationInput) (*AuthResponse, error) {
+func (s *authService) Register(ctx context.Context, input models.RegistrationInput) (*AuthResponse, error) {
 	if err := input.Validate(); err != nil {
-		return nil, fmt.Errorf("%w: %v", utils.ErrValidation, err)
+		return nil, fmt.Errorf("%w: %v", errorx.New(errorx.ErrCodeValidation, "registration failed", err), err)
 	}
 
 	input.Sanitize()
 
-	// Here you would typically:
-	// 1. Check if the user already exists
 	if _, err := s.userRepo.GetUserByEmail(ctx, input.Email); err != nil {
-		return nil, fmt.Errorf("%w %v", err, utils.ErrUserExist)
-	}
-	// 2. Hash the password
-	// 3. Store the user in the database
-	// 4. Generate and return an access token
+		if errors.As(err, &errorx.ErrNotFound) {
 
-	// For demonstration purposes:
+		} else {
+			return nil, fmt.Errorf("%w %v", err, errorx.ErrNotFound)
+		}
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), passwordCost)
 	if err != nil {
-		return nil, fmt.Errorf("%w: failed to hash password", utils.ErrInternalServer)
+		return nil, fmt.Errorf("%w: failed to hash password", errorx.ErrInternal)
 	}
 
 	// TODO: Implement user storage and token generation
-	_ = hashedPassword // Placeholder to use hashedPassword
-	user := &RegistrationInput{
+	_ = hashedPassword
+	user := &models.RegistrationInput{
 		Email:    input.Email,
 		Username: input.Username,
 		Password: string(hashedPassword),
 	}
-	userDetails := UserDetails{}
-	userDetails, err = s.userRepo.CreateUser(ctx, *user)
+
+	userDetails := &models.UserDetails{}
+	userDetails, err = s.userRepo.CreateUser(ctx, user)
 	if err != nil {
 		return nil, err
 	}
-	// Generate access token (implementation details omitted)
-	accessToken, err := generateAccessToken(user)
+
+	accessToken, err := s.Service.CreateAccessToken(ctx, *userDetails)
 	return &AuthResponse{
-		AccessToken: accessToken, // Replace with actual token generation
-		User:        userDetails,
+		AccessToken: accessToken,
+		User:        *userDetails,
 	}, nil
 }
-func (s *authService) Login(ctx context.Context, input LoginInput) (*AuthResponse, error) {
+func (s *authService) Login(ctx context.Context, input models.LoginInput) (*AuthResponse, error) {
 	if err := input.Validate(); err != nil {
-		return nil, fmt.Errorf("%w: %v", utils.ErrValidation, err)
+		return nil, fmt.Errorf("%w: %v", errorx.ErrValidation, err)
 	}
-
 	input.Sanitize()
 
-	// Check if the user exists
 	user, err := s.userRepo.GetUserByEmail(ctx, input.Email)
 	if err != nil {
-		if errors.Is(err, utils.ErrUserNotFound) {
-			return nil, fmt.Errorf("%w, %w: user not found", utils.ErrAuthentication, utils.ErrUserNotFound)
+		if errors.Is(err, errorx.ErrNotFound) {
+			return nil, fmt.Errorf("%w, %w: user not found", errorx.ErrNotFound)
 		}
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
 	// TODO: Implement password verification here
-	//hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), passwordCost)
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password))
 	if err != nil {
-		return nil, fmt.Errorf("%w , %w, %w", err, utils.ErrAuthentication, utils.ErrInvalidCredentials)
+		return nil, fmt.Errorf("%w , %w, %w", err, errorx.ErrInvalidCredentials)
 	}
-	// Generate access token
-	accessToken, err := generateAccessToken(&input)
+	accessToken, err := s.Service.CreateAccessToken(ctx, *user)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate access token: %w, %w", err, utils.ErrInternalServer)
+		return nil, err
+	}
+	//accessToken, err := generateAccessToken(&input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate access token: %w, %w", err, errorx.ErrInternal)
 	}
 
 	return &AuthResponse{
 		AccessToken: accessToken,
-		User:        UserDetails{Email: input.Email},
+		User: models.UserDetails{
+			ID:       user.ID,
+			UserName: user.UserName,
+			Email:    user.Email,
+			Password: user.Password,
+		},
 	}, nil
 }
 func verifyPassword(password string) (bool, error) {
@@ -113,7 +130,7 @@ func verifyPassword(password string) (bool, error) {
 
 	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
 	if err != nil {
-		return false, utils.ErrValidation
+		return false, errorx.ErrValidation
 	}
 	return true, nil
 }
@@ -130,22 +147,22 @@ func (in *RegistrationInput) Sanitize() {
 	in.Username = strings.TrimSpace(in.Username)
 }
 func (in *RegistrationInput) Validate() error {
-	var errors []string
+	var errorList []string
 
 	if err := ValidateEmail(in.Email); err != nil {
-		errors = append(errors, fmt.Sprintf("Email: %v", err))
+		errorList = append(errorList, fmt.Sprintf("Email: %v", err))
 	}
 
 	if err := validateUsername(in.Username); err != nil {
-		errors = append(errors, fmt.Sprintf("Username: %v", err))
+		errorList = append(errorList, fmt.Sprintf("Username: %v", err))
 	}
 
 	if err := validatePassword(in.Password); err != nil {
-		errors = append(errors, fmt.Sprintf("Password: %v", err))
+		errorList = append(errorList, fmt.Sprintf("Password: %v", err))
 	}
 
-	if len(errors) > 0 {
-		return fmt.Errorf("%w: %s", utils.ErrValidation, strings.Join(errors, "; "))
+	if len(errorList) > 0 {
+		return fmt.Errorf("%w: %s", errorx.ErrValidation, strings.Join(errorList, "; "))
 	}
 
 	return nil
@@ -166,7 +183,7 @@ func (in *LoginInput) Validate() error {
 	}
 
 	if len(errors) > 0 {
-		return fmt.Errorf("%w: %s", utils.ErrValidation, strings.Join(errors, "; "))
+		return fmt.Errorf("%w: %s", errorx.ErrValidation, strings.Join(errors, "; "))
 	}
 
 	return nil
