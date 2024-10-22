@@ -170,7 +170,7 @@ func (a *App) initializeRender() error {
 
 func LoadEnvInProd() error {
 	// Check if environment variables are already set (e.g., in production)
-	if os.Getenv("DB_HOST") != "" {
+	if os.Getenv("DATABASE_URL") != "" {
 		fmt.Println("Environment variables already set, skipping .env file loading")
 		return nil
 	}
