@@ -23,6 +23,7 @@ func NewRepo(repository *Repository) {
 	Repo = *repository
 }
 func (au *Repository) HomePage(w http.ResponseWriter, r *http.Request) {
+	_ = r.Context()
 	//ctx := context.Context(context.Background())
 	//user, err := au.db.GetUserByEmail(ctx, "henry@mail.com")
 	//if err != nil {
