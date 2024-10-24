@@ -47,7 +47,6 @@ package domain
 //	}
 //}
 //
-//// Register handles user registration
 //func (as *AuthService) Register(ctx context.Context, input auth.RegistrationInput) (*AuthResponse, error) {
 //	// Validate input
 //	if err := validateRegistrationInput(input); err != nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/bertoxic/graphqlChat/internal/chats"
 	"github.com/bertoxic/graphqlChat/internal/database/postgres"
 	"github.com/bertoxic/graphqlChat/internal/drivers"
 	errorx "github.com/bertoxic/graphqlChat/internal/error"
@@ -25,12 +26,14 @@ import (
 type App struct {
 	Config   *config.AppConfig
 	DB       database.DatabaseRepo
+	RDB      *database.RedisClient
 	Services *ServicesContainer
 }
 type ServicesContainer struct {
 	AuthService     auth.AuthService
 	UserAuthService auth.UserRepository
 	UserService     *user.Service
+	ChatService     *chats.HubInterface
 }
 
 //
@@ -87,6 +90,8 @@ func (a *App) initializeServices() error {
 	userRepo := user.NewUserRepo(a.DB)
 	userService := user.NewService(userRepo)
 	a.Services.UserService = userService
+	newChatHub := chats.NewHub(a.DB, *a.RDB)
+	a.Services.ChatService = &newChatHub
 	return nil
 }
 
@@ -104,12 +109,31 @@ func (a *App) initializeDB(ctx context.Context) error {
 		return errorx.New(errorx.ErrCodeInternal, "the type assertion for databases failed", errorx.ErrDatabase)
 	}
 	a.DB = postgres.NewPostgresDBRepo(a.Config, db)
+	//------------------------------- Redis DATABASE -------------------------------
+	newRedisDB, err := database.NewDatabase(ctx, a.Config.RedisDBinfo.URL, "redis")
+	rdb, ok := newRedisDB.(*drivers.RedisClient)
+	if !ok {
+		return errorx.New(errorx.ErrCodeInternal, "the type assertion for databases failed", errorx.ErrDatabase)
+	}
+	datB, err := database.NewRedisClient(ctx, rdb.Client)
+	if err != nil {
+		return fmt.Errorf("failed the type assertion for RedisDatabase: %w", err)
+	}
+
+	a.RDB = datB
 	return nil
 }
 
 func (a *App) initializeHandlers() error {
-	dbrepo := handlers.NewRepository(a.Config, a.DB)
-	handlers.NewRepo(dbrepo)
+	authDbRepo := handlers.NewRepository(a.Config, a.DB, a.Services.AuthService)
+	handlers.NewRepo(authDbRepo)
+	chatHub := chats.NewHub(a.DB, *a.RDB)
+	hub, ok := chatHub.(*chats.Hub)
+	if !ok {
+		return errorx.New(errorx.ErrCodeInternal, "the type assertion for chatHub failed", errorx.ErrDatabase)
+	}
+	newChatrep := handlers.NewChatRepository(a.Config, a.DB, *a.RDB, hub)
+	handlers.NewChatRepoInit(newChatrep)
 	return nil
 }
 

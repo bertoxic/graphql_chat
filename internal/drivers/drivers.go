@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/redis/go-redis/v9"
 	"log"
 	"path/filepath"
 	"runtime"
@@ -34,7 +35,6 @@ func NewPostgresDB(ctx context.Context, dsn string) (*PostgresDB, error) {
 		return nil, err
 	}
 	return &PostgresDB{Pool: conn, dsn: dsn}, nil
-
 }
 
 func (db *PostgresDB) Ping(ctx context.Context) error {
@@ -48,7 +48,6 @@ func (db *PostgresDB) Ping(ctx context.Context) error {
 func (db *PostgresDB) Close() {
 	db.Pool.Close()
 }
-
 func (db *PostgresDB) GetPoolConn() *pgxpool.Pool {
 	return db.Pool
 }
@@ -79,12 +78,12 @@ func (db *PostgresDB) Migrate() error {
 		return fmt.Errorf("unable to determine current file location")
 	}
 
-	// Go one level up by using filepath.Dir() twice
+	// Going one level up by using filepath.Dir() two times
 	parentDir := filepath.Dir(filepath.Dir(currentFile))
 
 	migrationPath := filepath.Join(parentDir, "migrations")
 
-	// Use filepath.ToSlash to ensure forward slashes
+	// Using filepath.ToSlash to ensure forward slashes
 	migrationURL := "file://" + filepath.ToSlash(migrationPath)
 
 	// Initialize the migrationstance
@@ -128,3 +127,60 @@ func (db *PostgresDB) Migrate() error {
 // 	log.Println("migration done")
 // 	return nil
 // }
+
+type RedisClient struct {
+	Client *redis.Client
+}
+
+func (r RedisClient) Ping(ctx context.Context) error {
+	pong, err := r.Client.Ping(ctx).Result()
+	if err != nil {
+		fmt.Println("Error connecting to Redis:", err)
+		return err
+	}
+	fmt.Println("Redis connected:", pong)
+	return nil
+}
+
+func (r RedisClient) Close() {
+	_ = r.Client.Close()
+}
+
+func (r RedisClient) Migrate() error {
+	//TODO implement me
+
+	return nil
+}
+
+func (r RedisClient) GetPoolConn() *pgxpool.Pool {
+	//TODO implement me
+
+	return nil
+}
+
+func NewRedisDB(ctx context.Context, dns string) (*RedisClient, error) {
+
+	//rdb := redis.NewClient(&redis.Options{
+	//	Addr:     fmt.Sprintf("%s:%s", hostName, port),
+	//	Password: password,
+	//	DB:       0,
+	//})
+
+	// Parse the URL to get the Redis options
+	options, err := redis.ParseURL(dns)
+	if err != nil {
+		panic(err)
+	}
+
+	// Create a Redis client
+	rdb := redis.NewClient(options)
+	pong, err := rdb.Ping(ctx).Result()
+	if err != nil {
+		fmt.Println("Error connecting to Redis:", err)
+		return nil, err
+	}
+	fmt.Println("Redis connected:", pong)
+
+	return &RedisClient{
+		Client: rdb}, nil
+}

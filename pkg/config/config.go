@@ -13,6 +13,7 @@ import (
 
 type AppConfig struct {
 	DataBaseINFO  *database
+	RedisDBinfo   *database
 	InProduction  bool
 	JWT           JWT
 	Port          string
@@ -32,6 +33,7 @@ func NewConfig(fileName, port string) (*AppConfig, error) {
 
 		return &AppConfig{
 			DataBaseINFO: &database{URL: os.Getenv("DATABASE_URL")},
+			RedisDBinfo:  &database{URL: os.Getenv("REDIS_DNS")},
 			JWT: JWT{
 				Secret: []byte(os.Getenv("JWT_SECRET")),
 				Issuer: os.Getenv("ISSUER"),
