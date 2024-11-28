@@ -183,7 +183,7 @@ func (c *Client) ReadPump() {
 		c.Conn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
-
+	c.ProcessUnreadMessages(context.Background(), c.User.ID)
 	for {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
@@ -204,17 +204,16 @@ func (c *Client) ReadPump() {
 			Type        string `json:"type"`
 			Content     string `json:"content"`
 			RecipientID string `json:"to_id,omitempty"`
-			MessageType string `json:"messageType"`
+			MessageType string `json:"scope"`
 		}
 
 		if err := json.Unmarshal(message, &incoming); err != nil {
 			log.Printf("error unmarshaling message: %v", err)
 			continue
 		}
-
+		log.Printf("scope iszzzzzzzzzzzzzzzzzzz", incoming.MessageType)
 		msg.Content = incoming.Content
-		msg.Type = incoming.MessageType
-		switch incoming.Type {
+		switch incoming.MessageType {
 		case "private":
 			msg.ToID = incoming.RecipientID
 			if msg.ToID == "" {
@@ -225,7 +224,7 @@ func (c *Client) ReadPump() {
 		case "public":
 			c.Hub.Public <- msg
 		default:
-			log.Printf("unknown message type: %s", incoming.Type)
+			log.Printf("unknown message type: %s", incoming.MessageType)
 		}
 	}
 }
@@ -250,10 +249,10 @@ func (c *Client) readPump() {
 		}
 
 		msg := decodeMessage(payload)
-		switch msg.Type {
-		case "text":
+		switch msg.Scope {
+		case "private":
 			c.Hub.Private <- msg
-		case "post":
+		case "public":
 			c.Hub.Public <- msg
 		}
 	}
@@ -379,6 +378,54 @@ func (h *Hub) GetUnreadMessages(ctx context.Context, id string) ([]models.Messag
 
 	h.Redis.Client.Expire(h.ctx, unreadKey, messageExpiry)
 	return messages, nil
+}
+
+func (c *Client) ProcessUnreadMessages(ctx context.Context, userID string) {
+	db, ok := c.Hub.DB.(*postgres.PostgresDBRepo)
+	if !ok {
+		//return nil, fmt.Errorf("pr.Repo does not implement database.Database")
+	}
+	var messageIDs []string
+	unreadMessages, err := c.Hub.GetUnreadMessages(context.Background(), c.User.ID)
+	if err != nil {
+		log.Printf("Failed to retrieve unread messages: %v", err)
+		return
+	}
+
+	// Send unread messages to the client
+	for _, msg := range unreadMessages {
+		messageJSON, _ := json.Marshal(msg)
+		messageIDs = append(messageIDs, msg.ID)
+		c.Conn.WriteMessage(websocket.TextMessage, messageJSON)
+
+	}
+
+	query := `
+        UPDATE messages 
+        SET is_read = true
+        WHERE id = ANY($1) 
+        AND to_user_id = $2 
+        AND is_read = false
+    `
+
+	// Execute the update
+	commandTag, err := db.DB.Exec(ctx, query, messageIDs, userID)
+	if err != nil {
+		//return fmt.Errorf("failed to mark messages as read: %v", err)
+	}
+
+	// Log the number of messages updated for monitoring
+	rowsAffected := commandTag.RowsAffected()
+	log.Printf("Marked %d messages as read for user %s", rowsAffected, userID)
+
+	// Optional: Update Redis to remove read messages from unread list
+	go func() {
+		unreadKey := fmt.Sprintf(unreadMsgKey, userID)
+		for _, msgID := range messageIDs {
+			c.Hub.Redis.Client.LRem(context.Background(), unreadKey, 0, msgID).Result()
+		}
+	}()
+
 }
 
 func (h *Hub) UpdateUserPresence(ctx context.Context, userID string) error {

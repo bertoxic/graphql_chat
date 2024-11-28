@@ -11,6 +11,7 @@ type Message struct {
 	ToID      string    `json:"to_id"`
 	Content   string    `json:"content"`
 	Type      string    `json:"type"`   // "text", "image", etc.
+	Scope     string    `json:"scope"`  // "private", "public", etc.
 	Status    string    `json:"status"` // "sent", "delivered", "read"
 	Timestamp time.Time `json:"timestamp"`
 }

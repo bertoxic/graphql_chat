@@ -50,17 +50,16 @@ func serveWs(hub *chats.Hub, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var ListID = []string{
-		"7c15d670-3e50-4246-ab60-9a2e834e9da6",
-		"f205ca45-4906-4c77-b936-17b4452f3d1f",
-		"dedff378-43f9-4b6a-85b7-e7310d5b8a83",
-		"8ca881fc-0fc3-4892-a3b6-0d6c754c58c9",
-		"af3024a9-a492-4313-aea1-240695a2fba0",
-		"ef259b7a-8085-4c1c-bed2-3cf3234ee45a",
-		"3712411e-2855-4c9b-b01e-98f0bd8ca83e",
-		"f16e7add-614a-42f6-ba0b-e9e9cb751a28",
-		"18ca2dda-d86d-4824-9f9c-6fcb1b2a7636",
+		"415d2711-a692-4378-bb59-774b6ed6ae06",
+		"552f9413-2efb-4320-9bc8-bb37a20da932",
+		"f7a112b1-0f3e-4528-8eeb-a544a1f4ea3c",
+		"d59a7929-ffda-4f1e-8c44-fabb0459868a",
+		"2ad90cd8-7ef7-4ba0-ae59-c46e78ceca78",
+		//"ad29d179-9773-453f-9d6d-1489fb417033",
+		//"78ca936e-227a-48c5-8172-27f5411b8272",
+		//"5e681a64-fb13-42a6-be6b-c999602e6f0c",
+		//"10399eb9-4df0-4985-9184-c56079f27884",
 	}
-
 	rand.Shuffle(len(ListID), func(i, j int) {
 		ListID[i], ListID[j] = ListID[j], ListID[i]
 	})
