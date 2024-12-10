@@ -23,23 +23,23 @@ type PostgresDB struct {
 func NewPostgresDB(ctx context.Context, dsn string) (*PostgresDB, error) {
 	dbConf, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		log.Fatalf("can't parse postgress config ")
+		log.Printf("can't parse postgress config ")
 	}
 	conn, err := pgxpool.ConnectConfig(ctx, dbConf)
 	if err != nil {
 		return nil, err
 	}
-	db := &PostgresDB{Pool: conn}
+	db := &PostgresDB{Pool: conn, dsn: dsn}
 	err = db.Ping(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &PostgresDB{Pool: conn, dsn: dsn}, nil
+	return db, nil
 }
 
 func (db *PostgresDB) Ping(ctx context.Context) error {
 	if err := db.Pool.Ping(ctx); err != nil {
-		log.Fatalf("can't ping the database: %v", err)
+		log.Printf("can't ping the database: %v", err)
 		return err
 	}
 	log.Print("postgres pinged and well connected🤗🥰")
@@ -47,6 +47,7 @@ func (db *PostgresDB) Ping(ctx context.Context) error {
 }
 func (db *PostgresDB) Close() {
 	db.Pool.Close()
+	log.Println("PostgreSQL connection closed.")
 }
 func (db *PostgresDB) GetPoolConn() *pgxpool.Pool {
 	return db.Pool
@@ -89,7 +90,7 @@ func (db *PostgresDB) Migrate() error {
 	// Initialize the migrationstance
 	m, err := migrate.New(migrationURL, db.dsn)
 	if err != nil {
-		return fmt.Errorf("failed to initialize migrations: %w", err)
+		return fmt.Errorf("failed to initialize migrationsx: %w", err)
 	}
 
 	if err := m.Up(); err != nil {

@@ -158,7 +158,7 @@ func (h *Hub) handlePrivateMessage(message *models.Message) {
 func (h *Hub) handlePublicMessage(message *models.Message) {
 
 	if message == nil {
-		log.Printf("there is no message availablw")
+		log.Printf("there is no message available")
 		return
 	}
 
